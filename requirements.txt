@@ -1,17 +1,9 @@
-# Web Framework
-streamlit==1.32.0
-
-# Data & Math (Pinned to your exact local versions)
-pandas==3.0.1
-numpy==2.2.6
-
-# Machine Learning & Processing
+streamlit
+pandas
+numpy
 xgboost==2.0.3
-scikit-learn==1.8.0
-shap==0.51.0
-joblib==1.3.0
-
-# Visualization & Image Handling
-matplotlib==3.10.8
-plotly==5.18.0
-Pillow>=10.4.0
+scikit-learn
+shap
+joblib
+matplotlib
+plotly
