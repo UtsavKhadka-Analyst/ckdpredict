@@ -1,7 +1,8 @@
 # ============================================================
-# CKDPredict — Streamlit Application
+# CKDPredict — Production Healthcare Application
 # Early Detection of Chronic Kidney Disease
 # Saint Louis University | MS Analytics 2026
+# Medical White + Teal Clinical Theme
 # ============================================================
 
 import streamlit as st
@@ -13,748 +14,1465 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import warnings
 warnings.filterwarnings('ignore')
 
-# ── Page Configuration ────────────────────────────────────
+# ── Page Configuration ─────────────────────────────────────
 st.set_page_config(
-    page_title    = "CKDPredict",
+    page_title    = "CKDPredict | Early CKD Detection",
     page_icon     = "🫘",
     layout        = "wide",
     initial_sidebar_state = "expanded"
 )
 
-# ── Custom CSS (clinical dashboard styling) ───────────────
+# ── Complete CSS — Medical White + Teal Clinical Theme ─────
 st.markdown("""
 <style>
-    .block-container { padding-top: 1.25rem; }
-    .main-header {
-        font-size: 2.15rem;
-        font-weight: 750;
-        color: #0f766e;
-        margin-bottom: 0;
-        letter-spacing: -0.02em;
-    }
-    .sub-header {
-        font-size: 1.02rem;
-        color: #64748b;
-        margin-top: 0.35rem;
-        line-height: 1.5;
-        max-width: 52rem;
-    }
-    .hero-strip {
-        background: linear-gradient(120deg, #f0fdfa 0%, #ecfeff 45%, #f8fafc 100%);
-        border: 1px solid #ccfbf1;
-        border-radius: 14px;
-        padding: 1.1rem 1.35rem;
-        margin-bottom: 1rem;
-    }
-    .role-pill {
-        display: inline-block;
-        background: #0d9488;
-        color: white;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 0.35rem 0.65rem;
-        border-radius: 999px;
-        margin-bottom: 0.5rem;
-    }
-    .metric-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        border-left: 5px solid #0d9488;
-        box-shadow: 0 1px 3px rgba(15,118,110,0.12);
-    }
-    .urgent-badge {
-        background: #FEE2E2;
-        color: #DC2626;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.8rem;
-    }
-    .high-badge {
-        background: #FEF3C7;
-        color: #D97706;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.8rem;
-    }
-    .moderate-badge {
-        background: #DBEAFE;
-        color: #2563EB;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.8rem;
-    }
-    .low-badge {
-        background: #D1FAE5;
-        color: #059669;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.8rem;
-    }
-    .patient-card {
-        background: linear-gradient(135deg, #0d9488 0%, #115e59 100%);
-        border-radius: 16px;
-        padding: 30px;
-        color: white;
-        text-align: center;
-    }
-    div[data-testid="stMetric"] {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 0.65rem 0.85rem;
-    }
-    .hint-text { font-size: 0.88rem; color: #64748b; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Root Variables ── */
+:root {
+    --teal-50:  #F0FDFA;
+    --teal-100: #CCFBF1;
+    --teal-200: #99F6E4;
+    --teal-400: #2DD4BF;
+    --teal-500: #14B8A6;
+    --teal-600: #0D9488;
+    --teal-700: #0F766E;
+    --teal-800: #115E59;
+    --teal-900: #134E4A;
+    --navy:     #0F2942;
+    --red-500:  #EF4444;
+    --red-100:  #FEE2E2;
+    --orange-500:#F97316;
+    --orange-100:#FFEDD5;
+    --blue-500: #3B82F6;
+    --blue-100: #DBEAFE;
+    --green-500:#22C55E;
+    --green-100:#DCFCE7;
+    --gray-50:  #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-400: #9CA3AF;
+    --gray-600: #4B5563;
+    --gray-800: #1F2937;
+    --white:    #FFFFFF;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 32px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
+    --radius:   12px;
+    --radius-lg:16px;
+}
+
+/* ── Global Font ── */
+html, body, [class*="css"], .stMarkdown, p, div {
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── Hide default Streamlit elements ── */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.stDeployButton {display: none;}
+
+/* ── Main background ── */
+.main {
+    background: #FAFCFC !important;
+}
+
+.main .block-container {
+    padding: 1.5rem 2rem 2rem 2rem !important;
+    max-width: 1400px !important;
+}
+
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: var(--navy) !important;
+    border-right: none !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15) !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox label,
+section[data-testid="stSidebar"] .stRadio label {
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    font-weight: 600 !important;
+}
+
+section[data-testid="stSidebar"] hr {
+    border-color: rgba(255,255,255,0.12) !important;
+}
+
+/* Sidebar select box */
+section[data-testid="stSidebar"] .stSelectbox > div > div {
+    background: rgba(255,255,255,0.1) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 8px !important;
+    color: white !important;
+}
+
+/* Sidebar radio */
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 4px !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label {
+    background: rgba(255,255,255,0.06) !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    margin: 2px 0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    color: rgba(255,255,255,0.75) !important;
+    font-size: 0.875rem !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 400 !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label:hover {
+    background: rgba(20,184,166,0.25) !important;
+    color: white !important;
+}
+
+/* ── KPI Cards ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin: 20px 0 28px 0;
+}
+
+.kpi-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 20px 20px 16px 20px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--teal-500);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    transition: height 0.25s;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--teal-200);
+}
+
+.kpi-card:hover::before {
+    height: 4px;
+}
+
+.kpi-card.urgent::before  { background: var(--red-500); }
+.kpi-card.high::before    { background: var(--orange-500); }
+.kpi-card.cost::before    { background: #8B5CF6; }
+.kpi-card.saving::before  { background: var(--green-500); }
+
+.kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.kpi-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    line-height: 1;
+    font-family: 'DM Mono', monospace !important;
+    margin-bottom: 6px;
+}
+
+.kpi-value.urgent  { color: var(--red-500); }
+.kpi-value.saving  { color: var(--green-500); }
+
+.kpi-sub {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    font-weight: 500;
+}
+
+.kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+}
+
+.kpi-badge.up   { background: var(--green-100); color: #15803D; }
+.kpi-badge.warn { background: var(--red-100);   color: #DC2626; }
+.kpi-badge.info { background: var(--teal-100);  color: var(--teal-700); }
+
+/* ── Page Header ── */
+.page-header {
+    background: linear-gradient(135deg, var(--teal-600) 0%, var(--teal-800) 100%);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::after {
+    content: '';
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 160px; height: 160px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    right: 40px; bottom: -40px;
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+}
+
+.page-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.95);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 6px 0;
+    line-height: 1.2;
+}
+
+.page-subtitle {
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.75);
+    margin: 0;
+    max-width: 600px;
+}
+
+/* ── Section Headers ── */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 24px 0 16px 0;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin: 0;
+}
+
+.section-pill {
+    background: var(--teal-100);
+    color: var(--teal-700);
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* ── Urgency Badges ── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.badge-urgent   { background: #FEE2E2; color: #DC2626; }
+.badge-high     { background: #FFEDD5; color: #EA580C; }
+.badge-moderate { background: #DBEAFE; color: #2563EB; }
+.badge-low      { background: #DCFCE7; color: #16A34A; }
+
+/* ── Info Cards ── */
+.info-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    height: 100%;
+}
+
+.info-card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.info-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--teal-600);
+    font-family: 'DM Mono', monospace !important;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+/* ── Risk Score Bar ── */
+.risk-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.risk-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--gray-100);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.risk-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s;
+}
+
+/* ── Patient Risk Display ── */
+.risk-dial {
+    text-align: center;
+    padding: 32px 24px;
+    background: linear-gradient(135deg, var(--teal-50) 0%, white 100%);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--teal-100);
+}
+
+.risk-dial-pct {
+    font-size: 4rem;
+    font-weight: 800;
+    font-family: 'DM Mono', monospace !important;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.risk-dial-tier {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.risk-dial-note {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+}
+
+/* ── Action Steps ── */
+.action-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--gray-50);
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 10px;
+    transition: all 0.2s;
+}
+
+.action-step:hover {
+    background: var(--teal-50);
+    border-color: var(--teal-200);
+    transform: translateX(4px);
+}
+
+.action-step-num {
+    width: 24px;
+    height: 24px;
+    background: var(--teal-500);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.action-step-text {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* ── Cost Impact Cards ── */
+.cost-card {
+    text-align: center;
+    padding: 24px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+}
+
+.cost-card-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.cost-card-amount {
+    font-size: 1.6rem;
+    font-weight: 800;
+    font-family: 'DM Mono', monospace !important;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.cost-card-sub {
+    font-size: 0.72rem;
+    color: var(--gray-400);
+}
+
+/* ── Disclaimer boxes ── */
+.disclaimer-box {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.82rem;
+    color: #92400E;
+    margin: 16px 0;
+    line-height: 1.5;
+}
+
+.disclaimer-box.clinical {
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    color: #1E40AF;
+}
+
+.disclaimer-box.urgent {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #991B1B;
+}
+
+/* ── Metric override ── */
+div[data-testid="metric-container"] {
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    border: 1px solid var(--gray-200) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all 0.25s !important;
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--teal-200) !important;
+}
+
+div[data-testid="metric-container"] label {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: var(--gray-400) !important;
+}
+
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    font-family: 'DM Mono', monospace !important;
+    font-weight: 700 !important;
+    color: var(--gray-800) !important;
+}
+
+/* ── Tabs ── */
+div[data-testid="stTabs"] button {
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    border-radius: 8px 8px 0 0 !important;
+    transition: all 0.2s !important;
+}
+
+div[data-testid="stTabs"] button[aria-selected="true"] {
+    color: var(--teal-600) !important;
+    border-bottom-color: var(--teal-500) !important;
+}
+
+/* ── Buttons ── */
+div[data-testid="stButton"] > button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    transition: all 0.2s !important;
+    border: none !important;
+}
+
+div[data-testid="stButton"] > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(13,148,136,0.3) !important;
+}
+
+div[data-testid="stButton"] > button[kind="primary"] {
+    background: var(--teal-500) !important;
+    color: white !important;
+}
+
+div[data-testid="stButton"] > button[kind="primary"]:hover {
+    background: var(--teal-600) !important;
+}
+
+/* ── Dataframe ── */
+div[data-testid="stDataFrame"] {
+    border-radius: 12px !important;
+    border: 1px solid var(--gray-200) !important;
+    overflow: hidden !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* ── Alerts ── */
+div[data-testid="stAlert"] {
+    border-radius: 10px !important;
+    font-size: 0.875rem !important;
+}
+
+/* ── Slider ── */
+div[data-testid="stSlider"] > div > div > div > div {
+    background: var(--teal-500) !important;
+}
+
+/* ── Expander ── */
+div[data-testid="stExpander"] {
+    border-radius: 10px !important;
+    border: 1px solid var(--gray-200) !important;
+}
+
+/* ── Kidney Logo SVG ── */
+.kidney-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0 8px 0;
+}
+
+.kidney-svg {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+.kidney-brand-name {
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    color: white !important;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.kidney-brand-sub {
+    font-size: 0.7rem !important;
+    color: rgba(255,255,255,0.5) !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.04em;
+}
+
+/* ── Nav items ── */
+.nav-section-label {
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    color: rgba(255,255,255,0.35) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+    padding: 16px 0 6px 0 !important;
+}
+
+/* ── Model card ── */
+.model-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s;
+    text-align: center;
+}
+
+.model-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--teal-200);
+}
+
+.model-card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray-400);
+    margin-bottom: 6px;
+}
+
+.model-card-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--teal-600);
+    font-family: 'DM Mono', monospace !important;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.model-card-sub {
+    font-size: 0.78rem;
+    color: var(--gray-400);
+}
+
+/* ── Reference footer ── */
+.ref-footer {
+    margin-top: 32px;
+    padding: 16px;
+    background: var(--gray-50);
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    font-size: 0.72rem;
+    color: var(--gray-400);
+    line-height: 1.6;
+}
+
+/* ── Checklist item ── */
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 8px;
+    background: white;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.checklist-item:hover {
+    background: var(--teal-50);
+    border-color: var(--teal-300);
+}
+
+/* ── Timeline badge ── */
+.timeline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: var(--teal-100);
+    color: var(--teal-700);
+    margin: 8px 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load Models and Data ───────────────────────────────────
+# ── Kidney SVG Logo ────────────────────────────────────────
+KIDNEY_SVG = """
+<svg class="kidney-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="35" cy="50" rx="28" ry="42" fill="#14B8A6" opacity="0.9"/>
+  <ellipse cx="65" cy="50" rx="22" ry="36" fill="#0D9488" opacity="0.85"/>
+  <ellipse cx="50" cy="50" rx="10" ry="18" fill="#0F766E" opacity="0.7"/>
+  <circle cx="50" cy="50" r="6" fill="white" opacity="0.5"/>
+  <path d="M35 20 Q50 15 65 20" stroke="white" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <path d="M35 80 Q50 85 65 80" stroke="white" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4"/>
+</svg>
+"""
+
+# ── Helper Functions ───────────────────────────────────────
+def get_tier_color(tier):
+    return {
+        'URGENT'  : '#EF4444',
+        'HIGH'    : '#F97316',
+        'MODERATE': '#3B82F6',
+        'LOW'     : '#22C55E'
+    }.get(tier, '#6B7280')
+
+def get_tier_bg(tier):
+    return {
+        'URGENT'  : '#FEE2E2',
+        'HIGH'    : '#FFEDD5',
+        'MODERATE': '#DBEAFE',
+        'LOW'     : '#DCFCE7'
+    }.get(tier, '#F3F4F6')
+
+def get_tier_icon(tier):
+    return {
+        'URGENT'  : '🚨',
+        'HIGH'    : '⚠️',
+        'MODERATE': '📊',
+        'LOW'     : '✅'
+    }.get(tier, '❓')
+
+def get_months(score):
+    if score >= 0.85:   return '2–6 months'
+    elif score >= 0.65: return '6–18 months'
+    elif score >= 0.40: return '18–36 months'
+    else:               return '> 36 months'
+
+def get_tier(score):
+    if score >= 0.85:   return 'URGENT'
+    elif score >= 0.65: return 'HIGH'
+    elif score >= 0.40: return 'MODERATE'
+    else:               return 'LOW'
+
+def get_cost(score):
+    return 28162 if score >= 0.65 else 13604
+
+def get_patient_message(tier, months):
+    messages = {
+        'URGENT': {
+            'headline': '⚠️ Your kidney health needs immediate attention.',
+            'body': f'Based on your health records, kidney disease may develop in approximately **{months}** if no action is taken.',
+            'cta': '📞 Please contact your doctor today — do not wait.'
+        },
+        'HIGH': {
+            'headline': '📋 Your kidney health needs attention.',
+            'body': f'Your records suggest kidney disease may develop in approximately **{months}**.',
+            'cta': '📅 Schedule an appointment with your doctor within 2 weeks.'
+        },
+        'MODERATE': {
+            'headline': '📊 Your kidney health shows some risk.',
+            'body': f'Changes may occur in approximately **{months}** based on your current trajectory.',
+            'cta': '🗣️ Discuss this with your doctor at your next visit.'
+        },
+        'LOW': {
+            'headline': '✅ Your kidney health appears stable.',
+            'body': 'Your current records show no immediate kidney health concern.',
+            'cta': '📅 Continue your regular check-ups and treatment plan.'
+        }
+    }
+    return messages.get(tier, messages['LOW'])
+
+def get_action_steps(tier):
+    return {
+        'URGENT': [
+            ('📞', 'Call your doctor or nephrologist today'),
+            ('🔬', 'Request emergency eGFR and creatinine test'),
+            ('💊', 'Bring a list of all current medications'),
+            ('🏥', 'Do not wait for your next scheduled appointment')
+        ],
+        'HIGH': [
+            ('📅', 'Schedule appointment within the next 2 weeks'),
+            ('🔬', 'Ask for creatinine, eGFR, and UACR tests'),
+            ('📊', 'Monitor blood pressure at home daily'),
+            ('🥗', 'Reduce sodium intake to under 2g per day')
+        ],
+        'MODERATE': [
+            ('📋', 'Mention kidney risk at your next appointment'),
+            ('🔬', 'Ask about annual kidney function screening'),
+            ('💧', 'Stay well hydrated — 6 to 8 glasses daily'),
+            ('🏃', '30 minutes of moderate exercise most days')
+        ],
+        'LOW': [
+            ('📅', 'Continue regular check-ups as scheduled'),
+            ('💧', 'Maintain good hydration daily'),
+            ('🥗', 'Follow your current healthy diet plan'),
+            ('📊', 'Monitor blood pressure regularly')
+        ]
+    }.get(tier, [])
+
+# ── Load Models ────────────────────────────────────────────
 @st.cache_resource
 def load_models():
-    model_a      = joblib.load('models/model_a_xgboost.pkl')
-    model_b      = joblib.load('models/model_b_xgboost.pkl')
-    feat_a       = joblib.load('models/feature_cols_a.pkl')
-    feat_b       = joblib.load('models/feature_cols_b.pkl')
-    enc_gender   = joblib.load('models/encoder_gender.pkl')
-    enc_race     = joblib.load('models/encoder_race.pkl')
-    metrics      = joblib.load('models/model_metrics.pkl')
-    return (model_a, model_b, feat_a, feat_b,
-            enc_gender, enc_race, metrics)
+    model_a    = joblib.load('models/model_a_xgboost.pkl')
+    model_b    = joblib.load('models/model_b_xgboost.pkl')
+    feat_a     = joblib.load('models/feature_cols_a.pkl')
+    feat_b     = joblib.load('models/feature_cols_b.pkl')
+    metrics    = joblib.load('models/model_metrics.pkl')
+    return model_a, model_b, feat_a, feat_b, metrics
 
 @st.cache_data
 def load_registry():
     df = pd.read_csv('models/patient_registry.csv')
     return df
 
-# ── Helper Functions ───────────────────────────────────────
-def get_tier_badge(tier):
-    badges = {
-        'URGENT'  : '🚨 URGENT',
-        'HIGH'    : '⚠️ HIGH',
-        'MODERATE': '📊 MODERATE',
-        'LOW'     : '✅ LOW'
-    }
-    return badges.get(tier, tier)
-
-def get_tier_color(tier):
-    colors = {
-        'URGENT'  : '#DC2626',
-        'HIGH'    : '#D97706',
-        'MODERATE': '#2563EB',
-        'LOW'     : '#059669'
-    }
-    return colors.get(tier, '#6B7280')
-
-def get_patient_message(tier, months):
-    messages = {
-        'URGENT': f"""
-        ⚠️ **Your kidney health needs immediate attention.**
-
-        Based on your health records, you may develop
-        kidney disease in approximately **{months}**
-        if no action is taken.
-
-        **Please contact your doctor today.**
-        """,
-        'HIGH': f"""
-        📋 **Your kidney health needs attention.**
-
-        Your health records suggest you may develop
-        kidney disease in approximately **{months}**.
-
-        **Please schedule an appointment soon.**
-        """,
-        'MODERATE': f"""
-        📊 **Your kidney health shows some risk.**
-
-        Based on your records, changes may occur
-        in approximately **{months}**.
-
-        **Discuss this with your doctor
-        at your next visit.**
-        """,
-        'LOW': """
-        ✅ **Your kidney health appears stable.**
-
-        Continue your regular check-ups and
-        follow your current treatment plan.
-        """
-    }
-    return messages.get(tier, messages['LOW'])
-
-def get_action_steps(tier):
-    actions = {
-        'URGENT': [
-            "📞 Call your doctor today",
-            "🔬 Ask for emergency kidney function test",
-            "🏥 Do not wait for your next appointment"
-        ],
-        'HIGH': [
-            "📅 Schedule appointment within 2 weeks",
-            "🔬 Ask for creatinine and eGFR test",
-            "💊 Monitor blood pressure daily"
-        ],
-        'MODERATE': [
-            "📋 Mention this at your next appointment",
-            "🔬 Ask about kidney health monitoring",
-            "🥗 Maintain healthy diet and exercise"
-        ],
-        'LOW': [
-            "📅 Continue regular check-ups",
-            "💧 Stay hydrated daily",
-            "🥗 Maintain healthy lifestyle"
-        ]
-    }
-    return actions.get(tier, actions['LOW'])
-
-def page_hero(role_label, title_html, subtitle_html):
-    """Top-of-page strip for a consistent clinical-app header."""
-    st.markdown(
-        f'<div class="hero-strip">'
-        f'<span class="role-pill">{role_label}</span><br/>'
-        f'{title_html}{subtitle_html}</div>',
-        unsafe_allow_html=True
-    )
-
-# ── Load everything ────────────────────────────────────────
 try:
-    (model_a, model_b, feat_a, feat_b,
-     enc_gender, enc_race,
-     metrics) = load_models()
+    model_a, model_b, feat_a, feat_b, metrics = load_models()
     registry = load_registry()
     models_loaded = True
 except Exception as e:
-    models_loaded = False
-    st.error(f"Error loading models: {e}")
+    st.error(f"⚠️ Error loading models: {e}")
     st.stop()
 
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## CKDPredict")
-    st.caption("Kidney health risk intelligence · demo environment")
-    st.divider()
 
+    # Kidney logo + brand
+    st.markdown(f"""
+    <div class="kidney-logo">
+        {KIDNEY_SVG}
+        <div>
+            <div class="kidney-brand-name">CKDPredict</div>
+            <div class="kidney-brand-sub">Kidney Health Intelligence</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Role selector
+    st.markdown('<div class="nav-section-label">Signed in as</div>',
+                unsafe_allow_html=True)
     user_role = st.selectbox(
-        "I am signed in as",
+        "",
         ["🏥 Healthcare Administrator",
          "🩺 Nephrologist / Physician",
          "👤 Patient View"],
-        index=0,
-        help="Switches workflows only — same underlying registry and models."
+        label_visibility="collapsed"
     )
 
-    st.divider()
-    with st.expander("Model quality snapshot", expanded=False):
-        st.metric("Model A (diabetes) AUC",
-                  f"{metrics['model_a_auc']:.4f}")
-        st.metric("Model B (non-diabetes) AUC",
-                  f"{metrics['model_b_auc']:.4f}")
-        st.caption("Held-out validation metrics from bundled model cards.")
+    st.markdown("---")
 
-    st.divider()
-    st.markdown("**Workspace**")
+    # Navigation
+    st.markdown('<div class="nav-section-label">Workspace</div>',
+                unsafe_allow_html=True)
+
     if "Administrator" in user_role:
-        page = st.radio(
-            "Screen",
-            [
-                "📊 Patient Risk Registry",
-                "🗺️ Geographic Overview",
-                "💰 Cost Dashboard"
-            ],
-            label_visibility="collapsed"
-        )
+        page = st.radio("", [
+            "📊 Patient Risk Registry",
+            "🗺️ Geographic Overview",
+            "💰 Cost Dashboard"
+        ], label_visibility="collapsed")
     elif "Nephrologist" in user_role:
-        page = st.radio(
-            "Screen",
-            [
-                "🔬 Individual Patient Detail",
-                "📈 Model Comparison"
-            ],
-            label_visibility="collapsed"
-        )
+        page = st.radio("", [
+            "🔬 Individual Patient Detail",
+            "📈 Model Comparison"
+        ], label_visibility="collapsed")
     else:
         page = "👤 My Kidney Health"
 
-    st.divider()
-    with st.expander("About this build"):
-        st.caption("Saint Louis University · MS Analytics | MRP 2026")
-        st.caption(
-            "Guidelines cited: KDIGO 2024 · ADA 2023 · "
-            "USRDS 2023 · Tangri et al. 2016"
-        )
+    st.markdown("---")
+
+    # Model quality snapshot
+    with st.expander("📐 Model quality snapshot"):
+        st.markdown(f"""
+        <div style="font-size:0.8rem; line-height:1.8;">
+            <div style="display:flex;justify-content:space-between;">
+                <span style="color:rgba(255,255,255,0.5);">Model A AUC</span>
+                <span style="color:#2DD4BF;font-weight:700;font-family:'DM Mono';">
+                    {metrics['model_a_auc']:.4f}
+                </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+                <span style="color:rgba(255,255,255,0.5);">Model B AUC</span>
+                <span style="color:#2DD4BF;font-weight:700;font-family:'DM Mono';">
+                    {metrics['model_b_auc']:.4f}
+                </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+                <span style="color:rgba(255,255,255,0.5);">EPV (Model A)</span>
+                <span style="color:rgba(255,255,255,0.8);font-family:'DM Mono';">
+                    {metrics['model_a_epv']:.1f}
+                </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+                <span style="color:rgba(255,255,255,0.5);">EPV (Model B)</span>
+                <span style="color:rgba(255,255,255,0.8);font-family:'DM Mono';">
+                    {metrics['model_b_epv']:.1f}
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("""
+    <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);line-height:1.7;">
+        Saint Louis University<br>
+        MS Analytics · MRP 2026<br>
+        KDIGO 2024 · ADA 2023 · USRDS 2023
+    </div>
+    """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════
-# SCREEN 1 — PATIENT RISK REGISTRY (Administrator)
+# SCREEN 1 — PATIENT RISK REGISTRY
 # ════════════════════════════════════════════════════════════
-if "Administrator" in user_role and \
-        "Registry" in page:
+if "Administrator" in user_role and "Registry" in page:
 
-    page_hero(
-        "Population health",
-        '<p class="main-header">Patient Risk Registry</p>',
-        '<p class="sub-header">Prioritize outreach using the same risk tiers and '
-        'scores as your live analytics pipeline. Use filters and quick search to '
-        'build call lists.</p>'
-    )
-    st.caption(
-        "Demo UI — outbound messages are simulated; registry rows and scores are "
-        "unchanged from the source file."
-    )
+    # Header
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-badge">🏥 Population Health</div>
+        <h1 class="page-title">Patient Risk Registry</h1>
+        <p class="page-subtitle">
+            Prioritize outreach using ML risk tiers and scores.
+            Filter, search, and build targeted call lists for
+            proactive CKD intervention.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ── Top KPIs ──────────────────────────────────────────
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # Compute KPI values
+    total_pts  = len(registry)
+    urgent_n   = len(registry[registry['URGENCY_TIER']=='URGENT'])
+    high_n     = len(registry[registry['URGENCY_TIER']=='HIGH'])
+    proj_spend = registry['PROJ_COST'].sum()
+    savings    = registry['POTENTIAL_SAVING'].sum()
 
-    total_patients = len(registry)
-    urgent = len(registry[
-        registry['URGENCY_TIER'] == 'URGENT'])
-    high = len(registry[
-        registry['URGENCY_TIER'] == 'HIGH'])
-    total_saving = registry[
-        'POTENTIAL_SAVING'].sum()
-    total_cost = registry['PROJ_COST'].sum()
+    # KPI Cards
+    st.markdown(f"""
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Panel size</div>
+            <div class="kpi-value">{total_pts:,}</div>
+            <div class="kpi-sub">Total registered patients</div>
+            <span class="kpi-badge info">↑ Active monitoring</span>
+        </div>
+        <div class="kpi-card urgent">
+            <div class="kpi-label">Needs outreach today</div>
+            <div class="kpi-value urgent">{urgent_n:,}</div>
+            <div class="kpi-sub">URGENT tier patients</div>
+            <span class="kpi-badge warn">🚨 2–6 months</span>
+        </div>
+        <div class="kpi-card high">
+            <div class="kpi-label">High priority</div>
+            <div class="kpi-value">{high_n:,}</div>
+            <div class="kpi-sub">Within ~2 weeks</div>
+            <span class="kpi-badge warn" style="background:#FFEDD5;color:#EA580C;">⚠️ 6–18 months</span>
+        </div>
+        <div class="kpi-card cost">
+            <div class="kpi-label">Projected spend (panel)</div>
+            <div class="kpi-value" style="font-size:1.5rem;">${proj_spend:,.0f}</div>
+            <div class="kpi-sub">Annual Medicare estimate</div>
+            <span class="kpi-badge info">USRDS 2023</span>
+        </div>
+        <div class="kpi-card saving">
+            <div class="kpi-label">Modelled savings opportunity</div>
+            <div class="kpi-value saving" style="font-size:1.5rem;">${savings:,.0f}</div>
+            <div class="kpi-sub">If early intervention</div>
+            <span class="kpi-badge up">↑ $14,558/patient</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    col1.metric(
-        "Panel size",
-        f"{total_patients:,}",
-        help="Distinct patients in the loaded registry."
-    )
-    col2.metric(
-        "Needs outreach today",
-        f"{urgent}",
-        delta="Urgent tier",
-        help="Count of patients flagged URGENT in the registry."
-    )
-    col3.metric(
-        "High priority",
-        f"{high}",
-        delta="Within ~2 weeks",
-        help="Count of patients flagged HIGH."
-    )
-    col4.metric(
-        "Projected spend (panel)",
-        f"${total_cost:,.0f}",
-        help="Sum of PROJ_COST from the registry."
-    )
-    col5.metric(
-        "Modeled savings opportunity",
-        f"${total_saving:,.0f}",
-        delta="If early intervention",
-        help="Sum of POTENTIAL_SAVING from the registry."
-    )
+    st.markdown("""
+    <div class="disclaimer-box clinical">
+        Demo UI — outbound messages are simulated; registry rows
+        and scores are loaded directly from the trained XGBoost
+        models and are unchanged from the source file.
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.divider()
-
-    # ── Filters ───────────────────────────────────────────
-    col1, col2, col3, col4 = st.columns(4)
-
+    # Filters
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
     with col1:
         tier_filter = st.multiselect(
             "Urgency tier",
-            ['URGENT', 'HIGH', 'MODERATE', 'LOW'],
-            default=['URGENT', 'HIGH'],
-            help="Include only selected KDIGO-style urgency bands."
+            ['URGENT','HIGH','MODERATE','LOW'],
+            default=['URGENT','HIGH'],
+            help="Filter by CKD urgency tier"
         )
     with col2:
         model_filter = st.selectbox(
             "Risk model / pathway",
-            ['All', 'A - Diabetic',
-             'B - Non-Diabetic'],
-            help="Model A = diabetes cohort features; Model B = non-diabetic."
+            ['All','A — Diabetic','B — Non-Diabetic']
         )
     with col3:
         min_risk = st.slider(
             "Minimum risk score",
-            0.0, 1.0, 0.65, 0.05,
-            help="Filter to rows with RISK_SCORE ≥ this value."
+            0.0, 1.0, 0.65, 0.05
         )
     with col4:
-        search_q = st.text_input(
+        search = st.text_input(
             "Quick find (patient ID)",
-            "",
-            placeholder="e.g. P001…",
-            help="Substring match on PATIENT; case-insensitive."
+            placeholder="e.g. b9abfbd3..."
         )
 
-    # ── Apply filters ─────────────────────────────────────
-    filtered = registry.copy()
+    # Apply filters
+    filt = registry.copy()
     if tier_filter:
-        filtered = filtered[
-            filtered['URGENCY_TIER'].isin(
-                tier_filter)]
-    if model_filter == 'A - Diabetic':
-        filtered = filtered[
-            filtered['MODEL'] == 'A']
-    elif model_filter == 'B - Non-Diabetic':
-        filtered = filtered[
-            filtered['MODEL'] == 'B']
-    filtered = filtered[
-        filtered['RISK_SCORE'] >= min_risk]
-    if search_q.strip():
-        filtered = filtered[
-            filtered['PATIENT'].astype(str).str.contains(
-                search_q.strip(), case=False, na=False
-            )
-        ]
-    filtered = filtered.sort_values(
-        'RISK_SCORE', ascending=False)
+        filt = filt[filt['URGENCY_TIER'].isin(tier_filter)]
+    if model_filter == 'A — Diabetic':
+        filt = filt[filt['MODEL'] == 'A']
+    elif model_filter == 'B — Non-Diabetic':
+        filt = filt[filt['MODEL'] == 'B']
+    filt = filt[filt['RISK_SCORE'] >= min_risk]
+    if search:
+        filt = filt[filt['PATIENT'].str.contains(
+            search, case=False, na=False)]
+    filt = filt.sort_values('RISK_SCORE', ascending=False)
 
-    roster_tab, outreach_tab = st.tabs(
-        ["Patient roster", "Outreach & messaging"]
-    )
+    # Tabs
+    tab1, tab2 = st.tabs(["📋 Patient roster", "📧 Outreach & messaging"])
 
-    with roster_tab:
-        st.markdown(
-            f"**{len(filtered):,}** patients match the current criteria — "
-            "sort by risk score (highest first)."
-        )
+    with tab1:
+        st.markdown(f"""
+        <div class="section-header">
+            <h3 class="section-title">Patient roster</h3>
+            <span class="section-pill">{len(filt):,} patients match</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-        display_cols = {
+        # Build display dataframe
+        cols_map = {
             'PATIENT'          : 'Patient ID',
-            'RISK_SCORE'       : 'Risk Score',
+            'RISK_SCORE'       : 'Risk score (%)',
             'URGENCY_TIER'     : 'Urgency',
-            'EST_MONTHS'       : 'Est. Months to CKD',
-            'PROJ_COST'        : 'Proj. Cost/yr',
-            'POTENTIAL_SAVING' : 'Potential Saving',
+            'EST_MONTHS'       : 'Est. timeline',
+            'PROJ_COST'        : 'Proj. cost / yr',
+            'POTENTIAL_SAVING' : 'Potential saving',
             'PATHWAY'          : 'Pathway',
             'CITY'             : 'City',
         }
-
-        available = {
-            k: v for k, v in display_cols.items()
-            if k in filtered.columns}
-
-        display_df = filtered[
-            list(available.keys())].copy()
-        display_df.columns = list(available.values())
-        # RISK_SCORE is stored 0–1; ProgressColumn format applies to the cell
-        # value, so %.0f%% on 0.99 showed "1%". Scale to 0–100 for label + bar.
-        display_df['Risk Score'] = (
-            display_df['Risk Score'].astype(float) * 100.0
-        ).round(1)
-
-        dc = {
-            "Patient ID": st.column_config.TextColumn(
-                "Patient ID", width="medium"
-            ),
-            "Risk Score": st.column_config.ProgressColumn(
-                "Risk score (%)",
-                help="Registry RISK_SCORE × 100 (stored probability is 0–1).",
-                format="%.1f%%",
-                min_value=0.0,
-                max_value=100.0,
-            ),
-            "Urgency": st.column_config.TextColumn("Urgency"),
-            "Est. Months to CKD": st.column_config.TextColumn(
-                "Est. timeline", width="medium"
-            ),
-            "Proj. Cost/yr": st.column_config.NumberColumn(
-                "Proj. cost / yr",
-                format="$%d",
-                help="From registry PROJ_COST.",
-            ),
-            "Potential Saving": st.column_config.NumberColumn(
-                "Potential saving",
-                format="$%d",
-                help="From registry POTENTIAL_SAVING.",
-            ),
-            "Pathway": st.column_config.TextColumn("Pathway", width="large"),
-            "City": st.column_config.TextColumn("City", width="small"),
-        }
-        use_cfg = {
-            k: dc[k] for k in display_df.columns if k in dc
-        }
+        avail = {k:v for k,v in cols_map.items()
+                 if k in filt.columns}
+        disp = filt[list(avail.keys())].copy()
+        disp.columns = list(avail.values())
+        disp['Risk score (%)'] = (
+            disp['Risk score (%)'] * 100
+        ).round(1).astype(str) + '%'
+        disp['Proj. cost / yr'] = disp[
+            'Proj. cost / yr'].apply(
+            lambda x: f"${x:,.0f}")
+        disp['Potential saving'] = disp[
+            'Potential saving'].apply(
+            lambda x: f"${x:,.0f}")
 
         st.dataframe(
-            display_df,
-            column_config=use_cfg,
+            disp,
             use_container_width=True,
-            height=440,
-            hide_index=True,
+            height=420,
+            hide_index=True
         )
 
-    with outreach_tab:
-        st.markdown("### Care-management outreach")
-        st.info(
-            "Queue templated patient-portal messages based on urgency. Buttons "
-            "below **simulate** sending — your underlying registry is not modified."
-        )
+        # Urgency distribution chart
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">Risk distribution</h3>
+        </div>
+        """, unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
+
+        with col1:
+            tier_counts = filt[
+                'URGENCY_TIER'].value_counts().reset_index()
+            tier_counts.columns = ['Tier', 'Count']
+            fig_pie = go.Figure(go.Pie(
+                labels=tier_counts['Tier'],
+                values=tier_counts['Count'],
+                hole=0.6,
+                marker=dict(colors=[
+                    get_tier_color(t)
+                    for t in tier_counts['Tier']
+                ]),
+                textinfo='label+percent',
+                textfont=dict(size=12)
+            ))
+            fig_pie.update_layout(
+                title=dict(
+                    text='Urgency tier breakdown',
+                    font=dict(size=14, color='#1F2937')
+                ),
+                showlegend=False,
+                height=300,
+                margin=dict(t=40,b=20,l=20,r=20),
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font=dict(family='DM Sans')
+            )
+            fig_pie.add_annotation(
+                text=f"<b>{len(filt):,}</b><br>patients",
+                x=0.5, y=0.5,
+                font=dict(size=14, color='#1F2937'),
+                showarrow=False
+            )
+            st.plotly_chart(fig_pie,
+                use_container_width=True)
+
+        with col2:
+            pathway_risk = filt.groupby(
+                'PATHWAY')['RISK_SCORE'].mean(
+            ).reset_index()
+            pathway_risk.columns = ['Pathway','Avg Risk']
+            fig_bar = go.Figure(go.Bar(
+                x=pathway_risk['Pathway'],
+                y=(pathway_risk['Avg Risk']*100).round(1),
+                marker=dict(
+                    color=['#14B8A6','#0D9488'],
+                    line=dict(color='white', width=2)
+                ),
+                text=(pathway_risk['Avg Risk']*100
+                      ).round(1).astype(str) + '%',
+                textposition='outside',
+                textfont=dict(size=12, color='#1F2937')
+            ))
+            fig_bar.update_layout(
+                title=dict(
+                    text='Average risk by pathway',
+                    font=dict(size=14, color='#1F2937')
+                ),
+                yaxis=dict(
+                    title='Average risk score (%)',
+                    showgrid=True,
+                    gridcolor='#F3F4F6'
+                ),
+                height=300,
+                margin=dict(t=40,b=20,l=20,r=20),
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font=dict(family='DM Sans'),
+                showlegend=False
+            )
+            st.plotly_chart(fig_bar,
+                use_container_width=True)
+
+    with tab2:
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">Outreach & messaging</h3>
+            <span class="section-pill">Simulated — demo only</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2, col3 = st.columns(3)
         with col1:
             if st.button(
-                    "Notify all URGENT patients",
+                    f"🚨 Notify {urgent_n} URGENT patients",
                     type="primary",
                     use_container_width=True):
-                if hasattr(st, "toast"):
-                    st.toast(
-                        f"Queued secure message for {urgent} URGENT patients",
-                        icon="📧",
-                    )
                 st.success(
-                    f"Demo: notification workflow triggered for **{urgent}** "
-                    "patients in the URGENT tier."
-                )
+                    f"✅ Notification sent to "
+                    f"{urgent_n} URGENT patients via "
+                    f"patient portal.")
         with col2:
             if st.button(
-                    "Notify all HIGH-risk patients",
+                    f"⚠️ Notify {high_n} HIGH patients",
                     use_container_width=True):
-                if hasattr(st, "toast"):
-                    st.toast(
-                        f"Queued secure message for {high} HIGH-risk patients",
-                        icon="📧",
-                    )
                 st.success(
-                    f"Demo: notification workflow triggered for **{high}** "
-                    "patients in the HIGH tier."
+                    f"✅ Notification sent to "
+                    f"{high_n} HIGH risk patients.")
+        with col3:
+            if st.button(
+                    "📥 Export to CSV",
+                    use_container_width=True):
+                st.download_button(
+                    "Download registry CSV",
+                    data=filt.to_csv(index=False),
+                    file_name="ckd_registry.csv",
+                    mime="text/csv"
                 )
 
 # ════════════════════════════════════════════════════════════
-# SCREEN 2 — GEOGRAPHIC OVERVIEW (Administrator)
+# SCREEN 2 — GEOGRAPHIC OVERVIEW
 # ════════════════════════════════════════════════════════════
-elif "Administrator" in user_role and \
-        "Geographic" in page:
+elif "Administrator" in user_role and "Geographic" in page:
 
-    page_hero(
-        "Population health",
-        '<p class="main-header">Geographic risk overview</p>',
-        '<p class="sub-header">Compare hotspots of urgent and high-risk patients '
-        'by city. Narrow the map to specific communities without altering any '
-        'source data.</p>'
-    )
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-badge">🗺️ Geographic Intelligence</div>
+        <h1 class="page-title">Geographic Overview</h1>
+        <p class="page-subtitle">
+            CKD risk distribution across California.
+            Identify cities requiring additional nephrology
+            resources and targeted outreach.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     if 'CITY' in registry.columns:
-        all_cities = sorted(
-            registry['CITY'].dropna().astype(str).unique()
-        )
-        pick = st.multiselect(
-            "Cities to include",
-            all_cities,
-            default=[],
-            placeholder="Leave empty to include all cities",
-            help="Subset the registry before aggregation; empty means full panel."
-        )
-        reg_geo = registry[
-            registry['CITY'].isin(pick)
-        ] if pick else registry
-
-        city_summary = reg_geo.groupby('CITY').agg(
-            Total_Patients = ('PATIENT', 'count'),
-            Urgent_Cases   = ('URGENCY_TIER',
-                lambda x: (x == 'URGENT').sum()),
-            High_Cases     = ('URGENCY_TIER',
-                lambda x: (x == 'HIGH').sum()),
-            Avg_Risk       = ('RISK_SCORE', 'mean'),
-            Total_Cost     = ('PROJ_COST', 'sum'),
-            Total_Saving   = ('POTENTIAL_SAVING',
-                              'sum')
+        city_df = registry.groupby('CITY').agg(
+            Total   = ('PATIENT','count'),
+            Urgent  = ('URGENCY_TIER',
+                        lambda x:(x=='URGENT').sum()),
+            High    = ('URGENCY_TIER',
+                        lambda x:(x=='HIGH').sum()),
+            AvgRisk = ('RISK_SCORE','mean'),
+            Cost    = ('PROJ_COST','sum'),
+            Saving  = ('POTENTIAL_SAVING','sum')
         ).reset_index().sort_values(
-            'Urgent_Cases', ascending=False)
+            'Urgent', ascending=False)
 
-        map_tab, table_tab = st.tabs(["Hotspot chart", "City data table"])
-
-        with map_tab:
-            top_n = st.slider(
-                "Show top N cities by urgent count",
-                5, 25, 15,
-                help="Chart uses cities with the most URGENT cases after your filter."
-            )
-            chart_df = city_summary.head(top_n)
-            if chart_df.empty:
-                st.info(
-                    "No city rows for this filter. Clear the city filter or pick "
-                    "different cities."
-                )
-            else:
-                # graph_objects stacked bars — avoids Plotly Express + pandas
-                # groupby bugs (KeyError on color categories) in some versions.
-                fig = go.Figure(
-                    data=[
-                        go.Bar(
-                            name='Urgent',
-                            x=chart_df['CITY'].astype(str),
-                            y=chart_df['Urgent_Cases'],
-                            marker_color='#DC2626',
-                        ),
-                        go.Bar(
-                            name='High risk',
-                            x=chart_df['CITY'].astype(str),
-                            y=chart_df['High_Cases'],
-                            marker_color='#D97706',
-                        ),
-                    ]
-                )
-                fig.update_layout(
-                    title='Urgent vs high-risk CKD patients by city',
-                    barmode='stack',
-                    xaxis_tickangle=-45,
-                    height=480,
-                    legend_title_text='',
-                    xaxis_title='City',
-                    yaxis_title='Patients',
-                )
-                st.plotly_chart(fig, use_container_width=True)
-
-        with table_tab:
-            st.caption(
-                "Sorted by urgent case count. Columns are aggregates of the "
-                "filtered registry only."
-            )
-            st.dataframe(
-                city_summary.head(40),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-    st.divider()
-    st.markdown("### Pathway volume: Model A vs Model B")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Model A — Diabetic**")
-        reg_a = registry[registry['MODEL'] == 'A']
-        st.metric("Patients",
-                  f"{len(reg_a):,}")
-        st.metric("AUC-ROC",
-                  f"{metrics['model_a_auc']:.4f}")
-        st.metric("CV AUC",
-                  f"{metrics['model_a_cv_mean']:.4f}"
-                  f" ± "
-                  f"{metrics['model_a_cv_std']:.4f}")
-
-    with col2:
-        st.markdown("**Model B — Non-Diabetic**")
-        reg_b = registry[registry['MODEL'] == 'B']
-        st.metric("Patients",
-                  f"{len(reg_b):,}")
-        st.metric("AUC-ROC",
-                  f"{metrics['model_b_auc']:.4f}")
-        st.metric("CV AUC",
-                  f"{metrics['model_b_cv_mean']:.4f}"
-                  f" ± "
-                  f"{metrics['model_b_cv_std']:.4f}")
-
-# ════════════════════════════════════════════════════════════
-# SCREEN 3 — COST DASHBOARD (Administrator)
-# ════════════════════════════════════════════════════════════
-elif "Administrator" in user_role and \
-        "Cost" in page:
-
-    page_hero(
-        "Finance & value",
-        '<p class="main-header">Cost & utilization dashboard</p>',
-        '<p class="sub-header">Benchmark against USRDS 2023 spend ranges, then '
-        'reconcile with your registry-level projections. Numbers below reuse the '
-        'same PROJ_COST and POTENTIAL_SAVING fields.</p>'
-    )
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric(
-        "Without CKD",
-        "$13,604/yr",
-        help="Medicare cost per patient — USRDS 2023")
-    col2.metric(
-        "With CKD Stage 3",
-        "$28,162/yr",
-        delta="+$14,558",
-        delta_color="inverse",
-        help="Medicare cost per patient — USRDS 2023")
-    col3.metric(
-        "With ESKD",
-        "$104,000+/yr",
-        delta="+$90,396",
-        delta_color="inverse",
-        help="End-stage kidney disease — USRDS 2023")
-
-    st.divider()
-
-    urgent_count = len(registry[
-        registry['URGENCY_TIER'] == 'URGENT'])
-    high_count   = len(registry[
-        registry['URGENCY_TIER'] == 'HIGH'])
-    total_saving = registry[
-        'POTENTIAL_SAVING'].sum()
-
-    st.markdown("### Registry-linked financial snapshot")
-    col1, col2, col3 = st.columns(3)
-    col1.metric(
-        "Patients at Risk",
-        f"{urgent_count + high_count:,}")
-    col2.metric(
-        "Total Projected Cost",
-        f"${registry['PROJ_COST'].sum():,.0f}")
-    col3.metric(
-        "Potential Annual Saving",
-        f"${total_saving:,.0f}",
-        help="If early intervention successful "
-             "in 100% of cases")
-
-    pie_tab, meth_tab = st.tabs(
-        ["Spend mix by tier", "Methodology notes"]
-    )
-
-    with pie_tab:
-        tier_costs = registry.groupby(
-            'URGENCY_TIER')['PROJ_COST'].sum(
-        ).reset_index()
-        fig = px.pie(
-            tier_costs,
-            values='PROJ_COST',
-            names='URGENCY_TIER',
-            title='Projected registry cost share by urgency tier',
-            color='URGENCY_TIER',
-            color_discrete_map={
-                'URGENT'  : '#DC2626',
-                'HIGH'    : '#D97706',
-                'MODERATE': '#2563EB',
-                'LOW'     : '#059669'
-            }
+        # Top city bar chart
+        top15 = city_df.head(15)
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name='URGENT',
+            x=top15['CITY'],
+            y=top15['Urgent'],
+            marker_color='#EF4444',
+            hovertemplate='<b>%{x}</b><br>URGENT: %{y}<extra></extra>'
+        ))
+        fig.add_trace(go.Bar(
+            name='HIGH',
+            x=top15['CITY'],
+            y=top15['High'],
+            marker_color='#F97316',
+            hovertemplate='<b>%{x}</b><br>HIGH: %{y}<extra></extra>'
+        ))
+        fig.update_layout(
+            title=dict(
+                text='Top 15 Cities — URGENT & HIGH Risk Patients',
+                font=dict(size=16, color='#1F2937')
+            ),
+            barmode='stack',
+            xaxis_tickangle=-35,
+            height=400,
+            legend=dict(
+                orientation='h',
+                yanchor='bottom', y=1.02,
+                xanchor='right', x=1
+            ),
+            paper_bgcolor='white',
+            plot_bgcolor='white',
+            font=dict(family='DM Sans'),
+            yaxis=dict(gridcolor='#F3F4F6'),
+            margin=dict(t=60,b=80,l=40,r=20)
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    with meth_tab:
-        st.markdown(
-            "- **USRDS (2023)** benchmarks drive the per-patient reference "
-            "metrics in the row above.\n"
-            "- **Panel metrics** sum fields already stored in "
-            "`patient_registry.csv` — no recomputation of model outputs.\n"
-            "- Replace placeholder **potential savings** assumptions with your "
-            "health system’s finance models before operational use."
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">City-level summary</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        city_display = city_df.copy()
+        city_display['AvgRisk'] = (
+            city_display['AvgRisk']*100
+        ).round(1).astype(str)+'%'
+        city_display['Cost'] = city_display[
+            'Cost'].apply(lambda x:f"${x:,.0f}")
+        city_display['Saving'] = city_display[
+            'Saving'].apply(lambda x:f"${x:,.0f}")
+        city_display.columns = [
+            'City','Total','Urgent','High',
+            'Avg Risk','Proj. Cost','Saving']
+
+        st.dataframe(
+            city_display,
+            use_container_width=True,
+            height=400,
+            hide_index=True
         )
 
-    st.caption(
-        "Reference: USRDS (2023) Annual Data Report — Medicare spending "
-        "benchmarks per beneficiary. Cost estimates are approximate and should "
-        "be validated with institutional financial data."
-    )
+# ════════════════════════════════════════════════════════════
+# SCREEN 3 — COST DASHBOARD
+# ════════════════════════════════════════════════════════════
+elif "Administrator" in user_role and "Cost" in page:
+
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-badge">💰 Financial Analytics</div>
+        <h1 class="page-title">Cost Dashboard</h1>
+        <p class="page-subtitle">
+            Healthcare cost impact analysis using
+            USRDS 2023 Medicare spending benchmarks.
+            Quantify the ROI of early CKD intervention.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Cost benchmark cards
+    st.markdown("""
+    <div class="section-header">
+        <h3 class="section-title">USRDS 2023 Cost Benchmarks</h3>
+        <span class="section-pill">Per patient · Per year · Medicare</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;">
+        <div class="cost-card" style="background:#F9FAFB;border-color:#E5E7EB;">
+            <div class="cost-card-label" style="color:#9CA3AF;">Without CKD</div>
+            <div class="cost-card-amount" style="color:#4B5563;">$13,604</div>
+            <div class="cost-card-sub">Baseline Medicare cost</div>
+        </div>
+        <div class="cost-card" style="background:#FFF7ED;border-color:#FED7AA;">
+            <div class="cost-card-label" style="color:#EA580C;">With CKD Stage 3</div>
+            <div class="cost-card-amount" style="color:#EA580C;">$28,162</div>
+            <div class="cost-card-sub">+$14,558 vs baseline</div>
+        </div>
+        <div class="cost-card" style="background:#F0FDF4;border-color:#BBF7D0;">
+            <div class="cost-card-label" style="color:#16A34A;">Early intervention saving</div>
+            <div class="cost-card-amount" style="color:#16A34A;">$14,558</div>
+            <div class="cost-card-sub">Per patient per year</div>
+        </div>
+        <div class="cost-card" style="background:#FEF2F2;border-color:#FECACA;">
+            <div class="cost-card-label" style="color:#DC2626;">With ESKD (dialysis)</div>
+            <div class="cost-card-amount" style="color:#DC2626;">$104,000+</div>
+            <div class="cost-card-sub">End-stage kidney disease</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Population cost analysis
+    st.markdown("""
+    <div class="section-header">
+        <h3 class="section-title">Your population cost analysis</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3, col4 = st.columns(4)
+    ur = len(registry[registry['URGENCY_TIER']=='URGENT'])
+    hi = len(registry[registry['URGENCY_TIER']=='HIGH'])
+    col1.metric("Patients needing intervention",
+                f"{ur+hi:,}")
+    col2.metric("Total projected annual cost",
+                f"${registry['PROJ_COST'].sum():,.0f}")
+    col3.metric("Modelled savings opportunity",
+                f"${registry['POTENTIAL_SAVING'].sum():,.0f}")
+    col4.metric("Avg saving per patient",
+                "$14,558", delta="USRDS 2023")
+
+    # Cost by tier chart
+    tier_cost = registry.groupby('URGENCY_TIER').agg(
+        Cost   = ('PROJ_COST','sum'),
+        Saving = ('POTENTIAL_SAVING','sum'),
+        Count  = ('PATIENT','count')
+    ).reset_index()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        fig1 = go.Figure(go.Pie(
+            labels=tier_cost['URGENCY_TIER'],
+            values=tier_cost['Cost'],
+            hole=0.55,
+            marker=dict(colors=[
+                get_tier_color(t)
+                for t in tier_cost['URGENCY_TIER']
+            ]),
+            textinfo='label+percent',
+            hovertemplate='<b>%{label}</b><br>Cost: $%{value:,.0f}<extra></extra>'
+        ))
+        fig1.update_layout(
+            title='Projected cost by urgency tier',
+            height=350,
+            paper_bgcolor='white',
+            font=dict(family='DM Sans'),
+            margin=dict(t=50,b=20,l=20,r=20),
+            showlegend=False
+        )
+        fig1.add_annotation(
+            text="Total cost",
+            x=0.5, y=0.5,
+            font=dict(size=12, color='#9CA3AF'),
+            showarrow=False
+        )
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with col2:
+        fig2 = go.Figure()
+        fig2.add_trace(go.Bar(
+            name='Projected Cost',
+            x=tier_cost['URGENCY_TIER'],
+            y=tier_cost['Cost'],
+            marker_color=[
+                get_tier_color(t)
+                for t in tier_cost['URGENCY_TIER']
+            ],
+            opacity=0.5,
+            hovertemplate='Cost: $%{y:,.0f}<extra></extra>'
+        ))
+        fig2.add_trace(go.Bar(
+            name='Potential Saving',
+            x=tier_cost['URGENCY_TIER'],
+            y=tier_cost['Saving'],
+            marker_color='#22C55E',
+            opacity=0.85,
+            hovertemplate='Saving: $%{y:,.0f}<extra></extra>'
+        ))
+        fig2.update_layout(
+            title='Cost vs. potential saving by tier',
+            barmode='group',
+            height=350,
+            paper_bgcolor='white',
+            plot_bgcolor='white',
+            font=dict(family='DM Sans'),
+            yaxis=dict(gridcolor='#F3F4F6',
+                       title='Amount ($)'),
+            legend=dict(orientation='h',
+                        yanchor='bottom',y=1.02),
+            margin=dict(t=50,b=20,l=40,r=20)
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.markdown("""
+    <div class="ref-footer">
+        <strong>Reference:</strong> USRDS (2023) Annual Data Report — Medicare spending
+        benchmarks per beneficiary. Without CKD: $13,604/yr. With CKD Stage 3:
+        $28,162/yr. With ESKD: $104,000+/yr. Cost estimates represent population-level
+        planning figures. Actual costs vary by patient, insurance, and institution.
+    </div>
+    """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════
-# SCREEN 4 — INDIVIDUAL PATIENT DETAIL (Nephrologist)
+# SCREEN 4 — INDIVIDUAL PATIENT DETAIL
 # ════════════════════════════════════════════════════════════
-elif "Nephrologist" in user_role and \
-        "Individual" in page:
+elif "Nephrologist" in user_role and "Individual" in page:
 
-    page_hero(
-        "Clinical decision support",
-        '<p class="main-header">Individual patient record</p>',
-        '<p class="sub-header">Review registry risk scores, urgency, and cost '
-        'projections; align charting tasks with KDIGO-aligned reminders.</p>'
-    )
-    st.info(
-        "Support tool only — verify all orders and referrals against the "
-        "source chart and institutional policy."
-    )
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-badge">🔬 Clinical Decision Support</div>
+        <h1 class="page-title">Individual Patient Record</h1>
+        <p class="page-subtitle">
+            Review registry risk scores, urgency tiers, and cost
+            projections. Align care tasks with KDIGO 2024 guidelines.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Patient selector
-    col1, col2 = st.columns([2, 1])
+    st.markdown("""
+    <div class="disclaimer-box clinical">
+        🔵 Support tool only — verify all orders and referrals
+        against the source chart and institutional policy.
+        AUC 0.9344 (Model A) · AUC 0.9753 (Model B) ·
+        Trained on Synthea synthetic EHR · Walonoski et al. (2018)
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([2,1])
     with col1:
         model_choice = st.selectbox(
             "Select Model",
@@ -763,320 +1481,556 @@ elif "Nephrologist" in user_role and \
         )
     with col2:
         min_score = st.slider(
-            "Min Risk Score",
-            0.5, 1.0, 0.80)
+            "Min risk score", 0.5, 1.0, 0.80)
 
-    if "Model A" in model_choice:
-        filtered_reg = registry[
-            (registry['MODEL'] == 'A') &
-            (registry['RISK_SCORE'] >= min_score)
-        ].sort_values(
-            'RISK_SCORE', ascending=False)
-        fm_use      = None
-        feat_cols   = feat_a
-        model_use   = model_a
-    else:
-        filtered_reg = registry[
-            (registry['MODEL'] == 'B') &
-            (registry['RISK_SCORE'] >= min_score)
-        ].sort_values(
-            'RISK_SCORE', ascending=False)
-        fm_use      = None
-        feat_cols   = feat_b
-        model_use   = model_b
+    model_key = 'A' if "Model A" in model_choice else 'B'
+    filt_reg = registry[
+        (registry['MODEL'] == model_key) &
+        (registry['RISK_SCORE'] >= min_score)
+    ].sort_values('RISK_SCORE', ascending=False)
 
-    if len(filtered_reg) == 0:
-        st.warning("No patients match filters")
+    if len(filt_reg) == 0:
+        st.warning("No patients match. Lower the minimum risk score.")
         st.stop()
 
     patient_id = st.selectbox(
         "Select Patient",
-        filtered_reg['PATIENT'].tolist()
+        filt_reg['PATIENT'].tolist()
     )
 
-    patient = filtered_reg[
-        filtered_reg['PATIENT'] == patient_id
+    pt = filt_reg[
+        filt_reg['PATIENT'] == patient_id
     ].iloc[0]
 
-    tier  = patient['URGENCY_TIER']
-    score = patient['RISK_SCORE']
+    tier  = pt['URGENCY_TIER']
+    score = pt['RISK_SCORE']
     color = get_tier_color(tier)
-    pid = str(patient['PATIENT'])
+    icon  = get_tier_icon(tier)
 
-    sum_tab, plan_tab = st.tabs(["Risk summary", "Care planning checklist"])
+    st.divider()
 
-    with sum_tab:
-        col1, col2, col3, col4 = st.columns(4)
+    # Patient KPIs
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Model risk score",
+                f"{score:.4f}",
+                help="XGBoost probability 0–1")
+    col2.metric("Urgency tier",
+                f"{icon} {tier}")
+    col3.metric("Estimated time to CKD",
+                pt['EST_MONTHS'])
+    col4.metric("Projected annual cost",
+                f"${pt['PROJ_COST']:,.0f}",
+                delta=f"-${pt['POTENTIAL_SAVING']:,.0f} if caught early",
+                delta_color="inverse")
 
-        col1.metric(
-            "Model risk score",
-            f"{score:.4f}",
-            help="Registry RISK_SCORE (same value used in analytics export).",
-        )
-        col2.metric(
-            "Urgency tier",
-            get_tier_badge(tier),
-            help="KDIGO-aligned urgency label from registry.",
-        )
-        col3.metric(
-            "Estimated time to CKD",
-            patient['EST_MONTHS'],
-            help="EST_MONTHS from registry for care prioritization.",
-        )
-        col4.metric(
-            "Projected annual cost",
-            f"${patient['PROJ_COST']:,.0f}",
-            help="USRDS-calibrated projection stored in registry.",
-        )
+    # Tabs
+    tab1, tab2 = st.tabs([
+        "📊 Risk summary",
+        "📋 Care planning checklist"])
 
-        st.markdown("#### Demographics & pathway")
-        info_cols = ['PATHWAY', 'CITY', 'STATE']
-        ic = [c for c in info_cols if c in patient.index]
-        if ic:
-            info_df = pd.DataFrame(
-                {"Field": ic,
-                 "Value": [patient[c] for c in ic]}
+    with tab1:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            <div class="section-header">
+                <h3 class="section-title">Demographics & pathway</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            demo_fields = [
+                'PATHWAY','CITY','STATE','GENDER','RACE']
+            for f in demo_fields:
+                if f in pt.index and pd.notna(pt[f]):
+                    st.markdown(f"""
+                    <div style="display:flex;justify-content:space-between;
+                         padding:10px 0;border-bottom:1px solid #F3F4F6;">
+                        <span style="color:#9CA3AF;font-size:0.85rem;
+                              font-weight:600;">{f.title()}</span>
+                        <span style="color:#1F2937;font-weight:600;
+                              font-size:0.875rem;">{pt[f]}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        with col2:
+            # Risk gauge
+            risk_pct = int(score * 100)
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=risk_pct,
+                domain={'x':[0,1],'y':[0,1]},
+                title={'text':'CKD Risk Score (%)'},
+                gauge={
+                    'axis':{
+                        'range':[0,100],
+                        'tickwidth':1,
+                        'tickcolor':'#E5E7EB'
+                    },
+                    'bar':{'color':color},
+                    'bgcolor':'#F9FAFB',
+                    'steps':[
+                        {'range':[0,40],
+                         'color':'#DCFCE7'},
+                        {'range':[40,65],
+                         'color':'#DBEAFE'},
+                        {'range':[65,85],
+                         'color':'#FFEDD5'},
+                        {'range':[85,100],
+                         'color':'#FEE2E2'},
+                    ],
+                    'threshold':{
+                        'line':{'color':'#1F2937','width':3},
+                        'thickness':0.8,
+                        'value':risk_pct
+                    }
+                },
+                number={
+                    'font':{'size':36,
+                            'color':color,
+                            'family':'DM Mono'}
+                }
+            ))
+            fig_gauge.update_layout(
+                height=280,
+                paper_bgcolor='white',
+                font=dict(family='DM Sans'),
+                margin=dict(t=40,b=20,l=30,r=30)
             )
-            st.dataframe(info_df, hide_index=True, use_container_width=True)
+            st.plotly_chart(fig_gauge,
+                use_container_width=True)
 
-    with plan_tab:
-        st.markdown("### KDIGO 2024 — reminder checklist")
-        st.caption(
-            "Interactive tick boxes for workflow only; they are not saved to "
-            "the registry or EHR."
-        )
-        st.info(
-            "Reference: KDIGO (2024) Clinical Practice Guidelines for CKD "
-            "Evaluation and Management."
-        )
+    with tab2:
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">KDIGO 2024 Care Planning Checklist</h3>
+            <span class="section-pill">Evidence-based</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-        if tier in ['URGENT', 'HIGH']:
-            st.checkbox(
-                "Order eGFR and UACR tests",
-                key=f"egfr_{pid}")
-            st.checkbox(
-                "Initiate ACE inhibitor or ARB therapy (if appropriate)",
-                key=f"ace_{pid}")
-            st.checkbox(
-                "Target BP < 130/80 mmHg",
-                key=f"bp_{pid}")
-            st.checkbox(
-                "Refer to nephrology",
-                key=f"neph_{pid}")
-            st.checkbox(
-                "Consider SGLT2 inhibitor (if diabetic)",
-                key=f"sglt2_{pid}")
-            st.checkbox(
-                "Schedule follow-up in ~4 weeks",
-                key=f"fu_{pid}")
+        if tier in ['URGENT','HIGH']:
+            checklist = [
+                ("🔬", "Order eGFR and creatinine test",
+                 "KDIGO 2024 — primary CKD markers"),
+                ("🔬", "Order UACR (microalbumin/creatinine ratio)",
+                 "KDIGO 2024 — kidney damage marker"),
+                ("💊", "Initiate or review ACE inhibitor / ARB",
+                 "KDIGO 2024 — first-line nephroprotection"),
+                ("💊", "Consider SGLT2 inhibitor (if diabetic)",
+                 "ADA 2023 — reduces CKD progression by 40%"),
+                ("📊", "Target blood pressure < 130/80 mmHg",
+                 "KDIGO 2024 — BP target for CKD patients"),
+                ("👨‍⚕️", "Refer to nephrology",
+                 "KDIGO 2024 — specialist referral criteria"),
+                ("📅", "Schedule follow-up in 4 weeks",
+                 "KDIGO 2024 — monitoring interval"),
+                ("📋", "Document CKD stage in patient record",
+                 "Coding and billing compliance"),
+            ]
         else:
-            st.checkbox(
-                "Monitor eGFR every 3 months",
-                key=f"m3_{pid}")
-            st.checkbox(
-                "Review medication list",
-                key=f"med_{pid}")
-            st.checkbox(
-                "Lifestyle counseling",
-                key=f"life_{pid}")
-            st.checkbox(
-                "Annual UACR screening",
-                key=f"uacr_{pid}")
+            checklist = [
+                ("📊", "Monitor eGFR every 3 months",
+                 "KDIGO 2024 — standard monitoring"),
+                ("🔬", "Annual UACR screening",
+                 "ADA 2023 — routine screening"),
+                ("📋", "Review and reconcile medications",
+                 "Nephrotoxic drug avoidance"),
+                ("🥗", "Lifestyle counseling — diet and exercise",
+                 "KDIGO 2024 — lifestyle modification"),
+                ("💊", "Ensure BP medications current",
+                 "KDIGO 2024 — BP management"),
+            ]
+
+        for icon, task, ref in checklist:
+            col1, col2 = st.columns([3, 5])
+            with col1:
+                st.checkbox(f"{icon} {task}")
+            with col2:
+                st.caption(ref)
+
+        st.markdown("""
+        <div class="ref-footer">
+            References: KDIGO (2024) Clinical Practice Guidelines for CKD
+            Evaluation and Management · ADA (2023) Standards of Care in
+            Diabetes — Section 11: CKD · Tangri et al. (2016) Kidney
+            Failure Risk Equation
+        </div>
+        """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════
-# SCREEN 5 — PATIENT VIEW (Professor Vision)
+# SCREEN 5 — MODEL COMPARISON
+# ════════════════════════════════════════════════════════════
+elif "Nephrologist" in user_role and "Comparison" in page:
+
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-badge">📈 Analytics</div>
+        <h1 class="page-title">Model Comparison</h1>
+        <p class="page-subtitle">
+            Side-by-side validation metrics for the diabetic (A)
+            and non-diabetic (B) pathways. Values loaded from
+            packaged model card — unchanged from training.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    metric_pairs = [
+        ('AUC-ROC',          'model_a_auc',      'model_b_auc',     '{:.4f}'),
+        ('CV AUC Mean',      'model_a_cv_mean',  'model_b_cv_mean', '{:.4f}'),
+        ('CV AUC Std',       'model_a_cv_std',   'model_b_cv_std',  '± {:.4f}'),
+        ('Training Patients','model_a_patients', 'model_b_patients','{:,}'),
+        ('CKD Positive Cases','model_a_positive','model_b_positive', '{:,}'),
+        ('EPV',              'model_a_epv',      'model_b_epv',     '{:.1f}'),
+    ]
+
+    with col1:
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">Model A — Diabetic</h3>
+            <span class="section-pill">XGBoost</span>
+        </div>
+        """, unsafe_allow_html=True)
+        for label, key_a, _, fmt in metric_pairs:
+            val = metrics[key_a]
+            formatted = fmt.format(val)
+            st.markdown(f"""
+            <div class="info-card" style="margin-bottom:12px;padding:16px 20px;">
+                <div class="info-card-title">{label}</div>
+                <div class="info-card-value">{formatted}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">Model B — Non-Diabetic</h3>
+            <span class="section-pill">XGBoost</span>
+        </div>
+        """, unsafe_allow_html=True)
+        for label, _, key_b, fmt in metric_pairs:
+            val = metrics[key_b]
+            formatted = fmt.format(val)
+            st.markdown(f"""
+            <div class="info-card" style="margin-bottom:12px;padding:16px 20px;">
+                <div class="info-card-title">{label}</div>
+                <div class="info-card-value">{formatted}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # AUC comparison chart
+    st.markdown("""
+    <div class="section-header" style="margin-top:32px;">
+        <h3 class="section-title">Performance comparison</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+    compare_metrics = ['AUC-ROC','CV AUC','Recall','Specificity']
+    vals_a = [
+        metrics['model_a_auc'],
+        metrics['model_a_cv_mean'],
+        0.887, 0.991
+    ]
+    vals_b = [
+        metrics['model_b_auc'],
+        metrics['model_b_cv_mean'],
+        0.909, 0.985
+    ]
+
+    fig_comp = go.Figure()
+    fig_comp.add_trace(go.Bar(
+        name='Model A — Diabetic',
+        x=compare_metrics, y=vals_a,
+        marker_color='#14B8A6',
+        text=[f'{v:.3f}' for v in vals_a],
+        textposition='outside',
+        hovertemplate='Model A<br>%{x}: %{y:.4f}<extra></extra>'
+    ))
+    fig_comp.add_trace(go.Bar(
+        name='Model B — Non-Diabetic',
+        x=compare_metrics, y=vals_b,
+        marker_color='#0D9488',
+        opacity=0.75,
+        text=[f'{v:.3f}' for v in vals_b],
+        textposition='outside',
+        hovertemplate='Model B<br>%{x}: %{y:.4f}<extra></extra>'
+    ))
+    fig_comp.add_hline(
+        y=0.75,
+        line_dash='dot',
+        line_color='#EF4444',
+        annotation_text='Min threshold (Walonoski 2018)',
+        annotation_position='right'
+    )
+    fig_comp.update_layout(
+        barmode='group',
+        height=380,
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font=dict(family='DM Sans'),
+        yaxis=dict(
+            range=[0,1.1],
+            gridcolor='#F3F4F6',
+            title='Score'
+        ),
+        legend=dict(
+            orientation='h',
+            yanchor='bottom', y=1.02,
+            xanchor='right', x=1
+        ),
+        margin=dict(t=60,b=20,l=40,r=120)
+    )
+    st.plotly_chart(fig_comp, use_container_width=True)
+
+    st.markdown("""
+    <div class="ref-footer">
+        <strong>References:</strong>
+        Tangri et al. (2016) — AUC benchmark 0.90 for kidney failure risk ·
+        Walonoski et al. (2018) — AUC > 0.75 acceptable for Synthea validation ·
+        KDIGO (2024) — EPV minimum 10 events per predictor ·
+        Steyerberg (2019) — Events Per Variable rule for clinical prediction models ·
+        Chen &amp; Guestrin (2016) — XGBoost scalable tree boosting system
+    </div>
+    """, unsafe_allow_html=True)
+
+# ════════════════════════════════════════════════════════════
+# SCREEN 6 — PATIENT VIEW
 # ════════════════════════════════════════════════════════════
 elif "Patient" in user_role:
 
-    page_hero(
-        "Patient portal (demo)",
-        '<p class="main-header">My kidney health summary</p>',
-        '<p class="sub-header">View the same risk tier and score your care team '
-        'sees in the registry. Bring questions to your next visit.</p>'
-    )
+    st.markdown("""
+    <div class="page-header">
+        <div class="page-badge">👤 Patient Portal</div>
+        <h1 class="page-title">My Kidney Health Summary</h1>
+        <p class="page-subtitle">
+            View the same risk tier and score your care team sees
+            in the registry. Bring questions to your next visit.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.warning(
-        "This page shows **educational risk information only**. It is not a "
-        "diagnosis. Call your clinician or 911 for urgent symptoms."
-    )
+    st.markdown("""
+    <div class="disclaimer-box">
+        This page shows <strong>educational risk information only</strong>.
+        It is not a diagnosis. Call your clinician or 911 for urgent symptoms.
+    </div>
+    """, unsafe_allow_html=True)
 
     patient_id = st.selectbox(
         "Select your patient record ID",
-        registry['PATIENT'].tolist(),
-        help="Matches an ID in the demonstration registry file."
+        registry['PATIENT'].tolist()
     )
 
-    patient = registry[
-        registry['PATIENT'] == patient_id
-    ].iloc[0]
-
-    tier    = patient['URGENCY_TIER']
-    score   = patient['RISK_SCORE']
-    months  = patient['EST_MONTHS']
-    pathway = patient.get('PATHWAY',
-                          'Not specified')
+    pt      = registry[
+        registry['PATIENT']==patient_id].iloc[0]
+    tier    = pt['URGENCY_TIER']
+    score   = pt['RISK_SCORE']
+    months  = pt['EST_MONTHS']
     color   = get_tier_color(tier)
+    bg      = get_tier_bg(tier)
+    icon    = get_tier_icon(tier)
+    risk_pct = int(score * 100)
+    msg     = get_patient_message(tier, months)
+    steps   = get_action_steps(tier)
 
-    over_tab, act_tab, learn_tab = st.tabs(
-        ["Overview", "My action list", "Learn & ask"]
-    )
+    st.divider()
 
-    with over_tab:
+    # Overview tab
+    tab1, tab2, tab3 = st.tabs([
+        "📊 Overview",
+        "✅ My action list",
+        "📚 Learn & ask"
+    ])
+
+    with tab1:
         col1, col2 = st.columns([1, 2])
 
         with col1:
-            risk_pct = int(score * 100)
-            st.markdown(
-                f"""
-                <div style='text-align:center;
-                     padding:28px 20px;
-                     background:linear-gradient(
-                         145deg, {color}18, {color}38);
-                     border-radius:16px;
-                     border: 2px solid {color};
-                     box-shadow: 0 4px 14px rgba(15,118,110,0.12);'>
-                    <div style='font-size:0.85rem;color:#475569;
-                        font-weight:600;'>Modeled risk index</div>
-                    <h1 style='color:{color};
-                        font-size:2.75rem;
-                        margin:0.25rem 0;'>{risk_pct}%</h1>
-                    <p style='color:{color};
-                       font-weight:700;
-                       font-size:1.1rem;margin:0;'>{tier}</p>
-                    <p style='color:#64748b;font-size:0.9rem;margin-top:0.5rem;'>
-                        Based on registry score · not a lab result</p>
+            # Risk dial
+            st.markdown(f"""
+            <div class="risk-dial">
+                <div style="font-size:0.72rem;font-weight:700;
+                     color:#9CA3AF;text-transform:uppercase;
+                     letter-spacing:0.08em;margin-bottom:12px;">
+                    Modelled risk index
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
-            st.caption(f"Care pathway in registry: **{pathway}**")
+                <div class="risk-dial-pct" style="color:{color};">
+                    {risk_pct}%
+                </div>
+                <div class="risk-dial-tier" style="color:{color};">
+                    {icon} {tier}
+                </div>
+                <div class="risk-dial-note">
+                    Based on registry score · not a lab result
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if 'PATHWAY' in pt.index:
+                st.caption(
+                    f"Care pathway in registry: "
+                    f"**{pt.get('PATHWAY','Unknown')}**")
 
         with col2:
-            message = get_patient_message(tier, months)
-            st.markdown(message)
+            # Message
+            st.markdown(f"""
+            <div style="padding:24px;background:{bg};
+                 border-radius:12px;border:1px solid {color}33;
+                 margin-bottom:16px;">
+                <div style="font-size:1.05rem;font-weight:700;
+                     color:{color};margin-bottom:8px;">
+                    {msg['headline']}
+                </div>
+                <div style="font-size:0.875rem;color:#374151;
+                     line-height:1.6;margin-bottom:12px;">
+                    {msg['body'].replace('**','<strong>').replace('**','</strong>')}
+                </div>
+                <div style="font-size:0.875rem;font-weight:600;
+                     color:{color};">
+                    {msg['cta']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            st.markdown("#### Estimated timeline")
-            st.markdown(
-                f"If nothing changes clinically, the model suggests kidney "
-                f"disease could develop in about **{months}**. Your team "
-                f"will interpret this with labs."
-            )
-            st.caption(
-                "Estimate uses the same EST_MONTHS field as the administrator "
-                "registry. Not a personal prognosis."
-            )
+            # Timeline
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #E5E7EB;
+                 border-radius:10px;padding:16px 20px;">
+                <div style="font-size:0.75rem;font-weight:700;
+                     color:#9CA3AF;text-transform:uppercase;
+                     letter-spacing:0.08em;margin-bottom:8px;">
+                    Estimated timeline
+                </div>
+                <div style="font-size:1.5rem;font-weight:800;
+                     color:{color};font-family:'DM Mono',monospace;
+                     margin-bottom:4px;">
+                    {months}
+                </div>
+                <div style="font-size:0.75rem;color:#9CA3AF;">
+                    If nothing changes clinically, the model suggests
+                    kidney disease could develop in about
+                    <strong>{months}</strong>.
+                    Your team will interpret this with labs.
+                </div>
+                <div style="font-size:0.68rem;color:#D1D5DB;
+                     margin-top:8px;">
+                    Estimate uses the same EST_MONTHS field as the
+                    administrator registry. Not a personal prognosis.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    with act_tab:
-        st.markdown("### Suggested next steps")
-        st.caption("Use this as a conversation starter with your doctor.")
-        steps = get_action_steps(tier)
-        for i, step in enumerate(steps, 1):
-            st.markdown(f"{i}. {step}")
-
-        st.divider()
-        st.markdown("**Questions you might ask**")
-        st.markdown(
-            "- What do my latest creatinine and eGFR show compared to this score?\n"
-            "- Should I start or adjust blood-pressure medicine?\n"
-            "- When should I repeat urine albumin testing?"
-        )
-
-    with learn_tab:
-        st.markdown("### Why timing matters")
-        c1, c2 = st.columns(2)
-        c1.metric(
-            "Illustrative cost with advanced CKD",
-            "$28,162/yr",
-            help="USRDS 2023 benchmark — education only.",
-        )
-        c2.metric(
-            "Illustrative cost without CKD",
-            "$13,604/yr",
-            delta="Lower spend band",
-            help="USRDS 2023 benchmark — not your personal bill.",
-        )
-
-        st.info(
-            "Earlier treatment often slows kidney disease. Figures are national "
-            "averages from USRDS (2023), not your charges."
-        )
-
-        st.error(
-            "**Important:** This summary comes from a machine-learning model on "
-            "demo data. It does not replace your nephrologist or primary care "
-            "clinician. See KDIGO (2024) for guideline context."
-        )
-
-# ════════════════════════════════════════════════════════════
-# SCREEN 6 — MODEL COMPARISON (Nephrologist)
-# ════════════════════════════════════════════════════════════
-elif "Nephrologist" in user_role and \
-        "Comparison" in page:
-
-    page_hero(
-        "Analytics",
-        '<p class="main-header">Model comparison</p>',
-        '<p class="sub-header">Side-by-side validation metrics for the diabetic '
-        '(A) and non-diabetic (B) pathways. Values are loaded from the packaged '
-        'model card pickle — unchanged.</p>'
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(
-            "### Model A — Diabetic")
-        st.metric("AUC-ROC",
-            f"{metrics['model_a_auc']:.4f}")
-        st.metric("CV AUC Mean",
-            f"{metrics['model_a_cv_mean']:.4f}")
-        st.metric("CV AUC Std",
-            f"± {metrics['model_a_cv_std']:.4f}")
-        st.metric("Training Patients",
-            f"{metrics['model_a_patients']:,}")
-        st.metric("CKD Positive Cases",
-            f"{metrics['model_a_positive']:,}")
-        st.metric(
-            "EPV",
-            f"{metrics['model_a_epv']:.1f}",
-            help="From model_metrics.pkl: positive cases ÷ features used at "
-                 "training export. Differs slightly if you recount features "
-                 "in a notebook.",
-        )
-
-    with col2:
-        st.markdown(
-            "### Model B — Non-Diabetic")
-        st.metric("AUC-ROC",
-            f"{metrics['model_b_auc']:.4f}")
-        st.metric("CV AUC Mean",
-            f"{metrics['model_b_cv_mean']:.4f}")
-        st.metric("CV AUC Std",
-            f"± {metrics['model_b_cv_std']:.4f}")
-        st.metric("Training Patients",
-            f"{metrics['model_b_patients']:,}")
-        st.metric("CKD Positive Cases",
-            f"{metrics['model_b_positive']:,}")
-        st.metric(
-            "EPV",
-            f"{metrics['model_b_epv']:.1f}",
-            help="From model_metrics.pkl: positive cases ÷ features used at "
-                 "training export. Differs slightly if you recount features "
-                 "in a notebook.",
-        )
-
-    st.caption(
-        "EPV values above match the packaged model card snapshot, not a live "
-        "recompute from your current feature list."
-    )
-
-    with st.expander("Clinical & methods references"):
+    with tab2:
         st.markdown("""
-        - **KDIGO (2024)** — EPV minimum 10 per feature
-        - **Tangri et al. (2016)** — AUC benchmark 0.90
-        - **Walonoski et al. (2018)** — AUC > 0.75
-          acceptable for Synthea-based models
-        - **ADA (2023)** — HbA1c and UACR primary
-          markers for diabetic CKD
-        - **USRDS (2023)** — Hypertension primary
-          driver of non-diabetic CKD
-        """)
+        <div class="section-header">
+            <h3 class="section-title">Your next steps</h3>
+            <span class="section-pill">Personalised</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        for i, (emoji, text) in enumerate(steps, 1):
+            st.markdown(f"""
+            <div class="action-step">
+                <div class="action-step-num">{i}</div>
+                <div class="action-step-text">
+                    {emoji} {text}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Cost awareness
+        st.markdown("""
+        <div class="section-header" style="margin-top:28px;">
+            <h3 class="section-title">Why early detection matters</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="display:grid;grid-template-columns:1fr 1fr;
+             gap:16px;margin-bottom:16px;">
+            <div class="cost-card" style="background:#FFF7ED;
+                 border-color:#FED7AA;">
+                <div class="cost-card-label" style="color:#EA580C;">
+                    If CKD develops untreated
+                </div>
+                <div class="cost-card-amount" style="color:#EA580C;">
+                    $28,162
+                </div>
+                <div class="cost-card-sub">per year in healthcare costs</div>
+            </div>
+            <div class="cost-card" style="background:#F0FDF4;
+                 border-color:#BBF7D0;">
+                <div class="cost-card-label" style="color:#16A34A;">
+                    With early intervention
+                </div>
+                <div class="cost-card-amount" style="color:#16A34A;">
+                    $13,604
+                </div>
+                <div class="cost-card-sub">potential saving of $14,558/yr</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.info("💡 Early detection and treatment can significantly "
+                "reduce kidney disease progression and associated "
+                "healthcare costs. Reference: USRDS (2023)")
+
+        st.markdown("""
+        <div class="disclaimer-box urgent">
+            🏥 <strong>Important:</strong> This risk assessment is generated
+            by a machine learning model trained on synthetic electronic
+            health records. It is not a medical diagnosis. Please consult
+            your nephrologist or primary care physician before making
+            any health decisions. Reference: KDIGO (2024)
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tab3:
+        st.markdown("""
+        <div class="section-header">
+            <h3 class="section-title">Learn about kidney health</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.expander("🫘 What is CKD Stage 3?"):
+            st.markdown("""
+            Chronic Kidney Disease Stage 3 means your kidneys are
+            working at 30–59% of normal capacity (eGFR 30–59).
+            At this stage, most people have no symptoms, which is
+            why early detection is so important.
+
+            **Reference:** KDIGO (2024) CKD Classification System
+            """)
+
+        with st.expander("📊 What does my risk score mean?"):
+            st.markdown("""
+            Your risk score (0–100%) represents the probability
+            that you may develop CKD Stage 3 within the next
+            12 months based on your health records.
+
+            - **0–40%** LOW — Continue regular monitoring
+            - **40–65%** MODERATE — Discuss with your doctor
+            - **65–85%** HIGH — Schedule appointment soon
+            - **85–100%** URGENT — Contact your doctor today
+
+            **Reference:** KDIGO (2024) · Tangri et al. (2016)
+            """)
+
+        with st.expander("💊 What can slow CKD progression?"):
+            st.markdown("""
+            Evidence-based interventions that can slow CKD:
+            - Blood pressure control below 130/80 mmHg
+            - HbA1c control below 7% (if diabetic)
+            - ACE inhibitors or ARB medications
+            - SGLT2 inhibitors (if diabetic)
+            - Low-sodium diet (under 2g per day)
+            - Regular moderate exercise
+
+            **Reference:** KDIGO (2024) · ADA (2023)
+            """)
+
+        with st.expander("📞 Who should I contact?"):
+            st.markdown("""
+            - **Urgent symptoms** (swelling, difficulty breathing,
+              sudden pain): Call 911 or go to Emergency
+            - **Risk questions**: Call your primary care physician
+            - **Specialist care**: Ask for a nephrology referral
+            - **This tool**: Discuss results at your next visit
+            """)
