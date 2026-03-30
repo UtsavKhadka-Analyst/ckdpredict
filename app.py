@@ -85,25 +85,32 @@ html, body, [class*="css"], .stMarkdown, p, div {
 footer {visibility: hidden;}
 .stDeployButton {display: none;}
 
-/* Keep header visible so sidebar toggle arrow works */
-header {visibility: visible;}
-header [data-testid="stToolbar"] {visibility: hidden;}
+/* Hide ONLY the toolbar items — keep header shell so toggle works */
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
 
-/* Hide white rectangle logo placeholder */
+/* Hide white rectangle — sidebar logo placeholder */
 div[data-testid="stSidebarHeader"] {
     display: none !important;
     height: 0 !important;
     min-height: 0 !important;
     padding: 0 !important;
+    margin: 0 !important;
 }
 
-/* Ensure sidebar collapse/expand button is always visible */
+/* Sidebar collapse toggle — always visible and styled */
 button[data-testid="collapsedControl"] {
     visibility: visible !important;
     display: flex !important;
-    background: var(--teal-500) !important;
+    opacity: 1 !important;
+    background: var(--teal-600) !important;
     color: white !important;
     border-radius: 0 8px 8px 0 !important;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.2) !important;
+}
+
+button[data-testid="collapsedControl"]:hover {
+    background: var(--teal-500) !important;
 }
 
 /* ── Main background ── */
@@ -876,13 +883,40 @@ except Exception as e:
     st.error(f"⚠️ Error loading models: {e}")
     st.stop()
 
+# ── Load Logo as Base64 ────────────────────────────────────
+import base64
+import os
+
+def get_logo_b64():
+    logo_path = "assets/ckd_logo.png"
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return ""
+
+logo_b64 = get_logo_b64()
+
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
 
-    # Kidney logo + brand
+    # Kidney logo in circle + brand
     st.markdown(f"""
     <div class="kidney-logo">
-        {KIDNEY_SVG}
+        <div style="
+            width:52px;height:52px;
+            border-radius:50%;
+            background:rgba(255,255,255,0.12);
+            border:2px solid rgba(255,255,255,0.25);
+            display:flex;align-items:center;
+            justify-content:center;
+            overflow:hidden;flex-shrink:0;">
+            <img src="data:image/png;base64,{logo_b64}"
+                 style="width:44px;height:44px;
+                        border-radius:50%;
+                        object-fit:cover;"
+                 onerror="this.parentElement.innerHTML='🫘'"
+            />
+        </div>
         <div>
             <div class="kidney-brand-name">CKDPredict</div>
             <div class="kidney-brand-sub">Kidney Health Intelligence</div>
@@ -1051,9 +1085,10 @@ if "Administrator" in user_role and "Registry" in page:
     with col3:
         min_risk_pct = st.slider(
             "Minimum risk score (%)",
-            0, 100, 65, 5
+            0, 100, 65, 5,
+            help="Filter patients by minimum CKD risk score"
         )
-        min_risk = min_risk_pct / 100
+        min_risk = min_risk_pct / 100  # convert to 0-1 for filtering
     with col4:
         search = st.text_input(
             "Quick find (patient ID)",
