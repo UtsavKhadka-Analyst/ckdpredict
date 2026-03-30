@@ -13,3 +13,6 @@ headless = true
 
 [browser]
 gatherUsageStats = false
+[client]
+showSidebarNavigation = true
+toolbarMode = "minimal"
