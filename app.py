@@ -26,6 +26,16 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
+# ── Kidney Logo in Sidebar ─────────────────────────────────
+try:
+    st.logo(
+        "assets/ckd_logo.png",
+        size="large",
+        link="https://ckdpredict.streamlit.app"
+    )
+except Exception:
+    pass  # Logo file not found — skip silently
+
 # ── Complete CSS — Medical White + Teal Clinical Theme ─────
 st.markdown("""
 <style>
@@ -73,8 +83,28 @@ html, body, [class*="css"], .stMarkdown, p, div {
 /* ── Hide default Streamlit elements ── */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
 .stDeployButton {display: none;}
+
+/* Keep header visible so sidebar toggle arrow works */
+header {visibility: visible;}
+header [data-testid="stToolbar"] {visibility: hidden;}
+
+/* Hide white rectangle logo placeholder */
+div[data-testid="stSidebarHeader"] {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ensure sidebar collapse/expand button is always visible */
+button[data-testid="collapsedControl"] {
+    visibility: visible !important;
+    display: flex !important;
+    background: var(--teal-500) !important;
+    color: white !important;
+    border-radius: 0 8px 8px 0 !important;
+}
 
 /* ── Main background ── */
 .main {
@@ -1019,10 +1049,11 @@ if "Administrator" in user_role and "Registry" in page:
             ['All','A — Diabetic','B — Non-Diabetic']
         )
     with col3:
-        min_risk = st.slider(
-            "Minimum risk score",
-            0.0, 1.0, 0.65, 0.05
+        min_risk_pct = st.slider(
+            "Minimum risk score (%)",
+            0, 100, 65, 5
         )
+        min_risk = min_risk_pct / 100
     with col4:
         search = st.text_input(
             "Quick find (patient ID)",
