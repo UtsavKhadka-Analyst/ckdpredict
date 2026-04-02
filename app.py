@@ -883,43 +883,29 @@ except Exception as e:
     st.error(f"⚠️ Error loading models: {e}")
     st.stop()
 
-# ── Load Logo as Base64 ────────────────────────────────────
-import base64
-import os
-
-def get_logo_b64():
-    logo_path = "assets/ckd_logo.png"
-    if os.path.exists(logo_path):
-        with open(logo_path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return ""
-
-logo_b64 = get_logo_b64()
-
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
 
-    # Kidney logo in circle + brand
-    st.markdown(f"""
+    # Kidney emoji in teal circle + brand
+    st.markdown("""
     <div class="kidney-logo">
         <div style="
-            width:52px;height:52px;
+            width:54px; height:54px;
             border-radius:50%;
-            background:rgba(255,255,255,0.12);
-            border:2px solid rgba(255,255,255,0.25);
-            display:flex;align-items:center;
+            background: linear-gradient(
+                135deg, #0D9488 0%, #14B8A6 60%, #2DD4BF 100%);
+            border: 2.5px solid rgba(255,255,255,0.35);
+            box-shadow: 0 4px 14px rgba(13,148,136,0.5);
+            display:flex; align-items:center;
             justify-content:center;
-            overflow:hidden;flex-shrink:0;">
-            <img src="data:image/png;base64,{logo_b64}"
-                 style="width:44px;height:44px;
-                        border-radius:50%;
-                        object-fit:cover;"
-                 onerror="this.parentElement.innerHTML='🫘'"
-            />
+            flex-shrink:0;">
+            <span style="font-size:28px;line-height:1;">&#x1FAD8;</span>
         </div>
         <div>
             <div class="kidney-brand-name">CKDPredict</div>
-            <div class="kidney-brand-sub">Kidney Health Intelligence</div>
+            <div class="kidney-brand-sub">
+                Kidney Health Intelligence
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
