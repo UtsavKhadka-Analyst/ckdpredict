@@ -1,5 +1,5 @@
 [theme]
-primaryColor = "#14B8A6"  ← Teal
+primaryColor = "#14B8A6"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F3F4F6"
 textColor = "#1F2937"
@@ -8,11 +8,10 @@ font = "sans serif"
 [server]
 maxUploadSize = 200
 headless = true
-# Leave CORS at default (true). enableCORS = false often breaks or alters
-# Streamlit Community Cloud (iframes / websocket loading vs local `streamlit run`).
 
 [browser]
 gatherUsageStats = false
+
 [client]
 showSidebarNavigation = true
 toolbarMode = "auto"
