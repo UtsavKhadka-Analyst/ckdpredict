@@ -26,6 +26,16 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
+# ── Kidney Logo in Sidebar ─────────────────────────────────
+try:
+    st.logo(
+        "assets/ckd_logo.png",
+        size="large",
+        link="https://ckdpredict.streamlit.app"
+    )
+except Exception:
+    pass  # Logo file not found — skip silently
+
 # ── Complete CSS — Medical White + Teal Clinical Theme ─────
 st.markdown("""
 <style>
@@ -73,8 +83,35 @@ html, body, [class*="css"], .stMarkdown, p, div {
 /* ── Hide default Streamlit elements ── */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
 .stDeployButton {display: none;}
+
+/* Hide ONLY the toolbar items — keep header shell so toggle works */
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
+
+/* Hide white rectangle — sidebar logo placeholder */
+div[data-testid="stSidebarHeader"] {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Sidebar collapse toggle — always visible and styled */
+button[data-testid="collapsedControl"] {
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+    background: var(--teal-600) !important;
+    color: white !important;
+    border-radius: 0 8px 8px 0 !important;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.2) !important;
+}
+
+button[data-testid="collapsedControl"]:hover {
+    background: var(--teal-500) !important;
+}
 
 /* ── Main background ── */
 .main {
@@ -198,7 +235,7 @@ section[data-testid="stSidebar"] .stRadio label:hover {
 
 .kpi-value {
     font-size: 1.9rem;
-        font-weight: 700;
+    font-weight: 700;
     color: var(--gray-800);
     line-height: 1;
     font-family: 'DM Mono', monospace !important;
@@ -263,10 +300,10 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     gap: 6px;
     background: rgba(255,255,255,0.18);
     color: rgba(255,255,255,0.95);
-        padding: 4px 12px;
-        border-radius: 20px;
+    padding: 4px 12px;
+    border-radius: 20px;
     font-size: 0.7rem;
-        font-weight: 700;
+    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     margin-bottom: 10px;
@@ -306,9 +343,9 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     background: var(--teal-100);
     color: var(--teal-700);
     padding: 2px 10px;
-        border-radius: 20px;
+    border-radius: 20px;
     font-size: 0.72rem;
-        font-weight: 700;
+    font-weight: 700;
 }
 
 /* ── Urgency Badges ── */
@@ -317,9 +354,9 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     align-items: center;
     gap: 4px;
     padding: 3px 10px;
-        border-radius: 20px;
+    border-radius: 20px;
     font-size: 0.72rem;
-        font-weight: 700;
+    font-weight: 700;
     letter-spacing: 0.04em;
 }
 
@@ -430,7 +467,7 @@ section[data-testid="stSidebar"] .stRadio label:hover {
     width: 24px;
     height: 24px;
     background: var(--teal-500);
-        color: white;
+    color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -450,7 +487,7 @@ section[data-testid="stSidebar"] .stRadio label:hover {
 
 /* ── Cost Impact Cards ── */
 .cost-card {
-        text-align: center;
+    text-align: center;
     padding: 24px 16px;
     border-radius: var(--radius);
     border: 1px solid var(--gray-200);
@@ -846,13 +883,40 @@ except Exception as e:
     st.error(f"⚠️ Error loading models: {e}")
     st.stop()
 
+# ── Load Logo as Base64 ────────────────────────────────────
+import base64
+import os
+
+def get_logo_b64():
+    logo_path = "assets/ckd_logo.png"
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return ""
+
+logo_b64 = get_logo_b64()
+
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
 
-    # Kidney logo + brand
+    # Kidney logo in circle + brand
     st.markdown(f"""
     <div class="kidney-logo">
-        {KIDNEY_SVG}
+        <div style="
+            width:52px;height:52px;
+            border-radius:50%;
+            background:rgba(255,255,255,0.12);
+            border:2px solid rgba(255,255,255,0.25);
+            display:flex;align-items:center;
+            justify-content:center;
+            overflow:hidden;flex-shrink:0;">
+            <img src="data:image/png;base64,{logo_b64}"
+                 style="width:44px;height:44px;
+                        border-radius:50%;
+                        object-fit:cover;"
+                 onerror="this.parentElement.innerHTML='🫘'"
+            />
+        </div>
         <div>
             <div class="kidney-brand-name">CKDPredict</div>
             <div class="kidney-brand-sub">Kidney Health Intelligence</div>
@@ -1019,10 +1083,12 @@ if "Administrator" in user_role and "Registry" in page:
             ['All','A — Diabetic','B — Non-Diabetic']
         )
     with col3:
-        min_risk = st.slider(
-            "Minimum risk score",
-            0.0, 1.0, 0.65, 0.05
+        min_risk_pct = st.slider(
+            "Minimum risk score (%)",
+            0, 100, 65, 5,
+            help="Filter patients by minimum CKD risk score"
         )
+        min_risk = min_risk_pct / 100  # convert to 0-1 for filtering
     with col4:
         search = st.text_input(
             "Quick find (patient ID)",
@@ -1056,15 +1122,15 @@ if "Administrator" in user_role and "Registry" in page:
 
         # Build display dataframe
         cols_map = {
-        'PATIENT'          : 'Patient ID',
+            'PATIENT'          : 'Patient ID',
             'RISK_SCORE'       : 'Risk score (%)',
-        'URGENCY_TIER'     : 'Urgency',
+            'URGENCY_TIER'     : 'Urgency',
             'EST_MONTHS'       : 'Est. timeline',
             'PROJ_COST'        : 'Proj. cost / yr',
             'POTENTIAL_SAVING' : 'Potential saving',
-        'PATHWAY'          : 'Pathway',
-        'CITY'             : 'City',
-    }
+            'PATHWAY'          : 'Pathway',
+            'CITY'             : 'City',
+        }
         avail = {k:v for k,v in cols_map.items()
                  if k in filt.columns}
         disp = filt[list(avail.keys())].copy()
@@ -1074,14 +1140,14 @@ if "Administrator" in user_role and "Registry" in page:
         ).round(1).astype(str) + '%'
         disp['Proj. cost / yr'] = disp[
             'Proj. cost / yr'].apply(
-        lambda x: f"${x:,.0f}")
+            lambda x: f"${x:,.0f}")
         disp['Potential saving'] = disp[
             'Potential saving'].apply(
-        lambda x: f"${x:,.0f}")
+            lambda x: f"${x:,.0f}")
 
-    st.dataframe(
+        st.dataframe(
             disp,
-        use_container_width=True,
+            use_container_width=True,
             height=420,
             hide_index=True
         )
@@ -1093,7 +1159,7 @@ if "Administrator" in user_role and "Registry" in page:
         </div>
         """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
         with col1:
             tier_counts = filt[
@@ -1177,21 +1243,21 @@ if "Administrator" in user_role and "Registry" in page:
         """, unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button(
+        with col1:
+            if st.button(
                     f"🚨 Notify {urgent_n} URGENT patients",
                     type="primary",
                     use_container_width=True):
-            st.success(
-                f"✅ Notification sent to "
+                st.success(
+                    f"✅ Notification sent to "
                     f"{urgent_n} URGENT patients via "
                     f"patient portal.")
-    with col2:
-        if st.button(
+        with col2:
+            if st.button(
                     f"⚠️ Notify {high_n} HIGH patients",
                     use_container_width=True):
-            st.success(
-                f"✅ Notification sent to "
+                st.success(
+                    f"✅ Notification sent to "
                     f"{high_n} HIGH risk patients.")
         with col3:
             if st.button(
@@ -1360,7 +1426,7 @@ elif "Administrator" in user_role and "Cost" in page:
     col1.metric("Patients needing intervention",
                 f"{ur+hi:,}")
     col2.metric("Total projected annual cost",
-        f"${registry['PROJ_COST'].sum():,.0f}")
+                f"${registry['PROJ_COST'].sum():,.0f}")
     col3.metric("Modelled savings opportunity",
                 f"${registry['POTENTIAL_SAVING'].sum():,.0f}")
     col4.metric("Avg saving per patient",
@@ -1486,7 +1552,7 @@ elif "Nephrologist" in user_role and "Individual" in page:
     model_key = 'A' if "Model A" in model_choice else 'B'
     filt_reg = registry[
         (registry['MODEL'] == model_key) &
-            (registry['RISK_SCORE'] >= min_score)
+        (registry['RISK_SCORE'] >= min_score)
     ].sort_values('RISK_SCORE', ascending=False)
 
     if len(filt_reg) == 0:
@@ -1624,7 +1690,7 @@ elif "Nephrologist" in user_role and "Individual" in page:
                 ("📋", "Document CKD stage in patient record",
                  "Coding and billing compliance"),
             ]
-    else:
+        else:
             checklist = [
                 ("📊", "Monitor eGFR every 3 months",
                  "KDIGO 2024 — standard monitoring"),
@@ -1841,9 +1907,9 @@ elif "Patient" in user_role:
     ])
 
     with tab1:
-    col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 2])
 
-    with col1:
+        with col1:
             # Risk dial
             st.markdown(f"""
             <div class="risk-dial">
@@ -1851,7 +1917,7 @@ elif "Patient" in user_role:
                      color:#9CA3AF;text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:12px;">
                     Modelled risk index
-            </div>
+                </div>
                 <div class="risk-dial-pct" style="color:{color};">
                     {risk_pct}%
                 </div>
@@ -1868,7 +1934,7 @@ elif "Patient" in user_role:
                     f"Care pathway in registry: "
                     f"**{pt.get('PATHWAY','Unknown')}**")
 
-    with col2:
+        with col2:
             # Message
             st.markdown(f"""
             <div style="padding:24px;background:{bg};
@@ -1935,7 +2001,7 @@ elif "Patient" in user_role:
             </div>
             """, unsafe_allow_html=True)
 
-    # Cost awareness
+        # Cost awareness
         st.markdown("""
         <div class="section-header" style="margin-top:28px;">
             <h3 class="section-title">Why early detection matters</h3>
@@ -2000,7 +2066,7 @@ elif "Patient" in user_role:
             """)
 
         with st.expander("📊 What does my risk score mean?"):
-    st.markdown("""
+            st.markdown("""
             Your risk score (0–100%) represents the probability
             that you may develop CKD Stage 3 within the next
             12 months based on your health records.
@@ -2033,4 +2099,4 @@ elif "Patient" in user_role:
             - **Risk questions**: Call your primary care physician
             - **Specialist care**: Ask for a nephrology referral
             - **This tool**: Discuss results at your next visit
-    """)
+            """)
