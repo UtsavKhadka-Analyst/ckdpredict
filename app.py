@@ -26,15 +26,6 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
-# ── Kidney Logo in Sidebar ─────────────────────────────────
-try:
-    st.logo(
-        "assets/ckd_logo.png",
-        size="large",
-        link="https://ckdpredict.streamlit.app"
-    )
-except Exception:
-    pass  # Logo file not found — skip silently
 
 # ── Complete CSS — Medical White + Teal Clinical Theme ─────
 st.markdown("""
@@ -85,32 +76,19 @@ html, body, [class*="css"], .stMarkdown, p, div {
 footer {visibility: hidden;}
 .stDeployButton {display: none;}
 
-/* Hide ONLY the toolbar items — keep header shell so toggle works */
-[data-testid="stToolbar"] {display: none !important;}
-[data-testid="stDecoration"] {display: none !important;}
-
-/* Hide white rectangle — sidebar logo placeholder */
+/* Hide white rectangle safely */
 div[data-testid="stSidebarHeader"] {
-    display: none !important;
     height: 0 !important;
     min-height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
+    overflow: hidden !important;
 }
 
-/* Sidebar collapse toggle — always visible and styled */
+/* Sidebar toggle always visible */
 button[data-testid="collapsedControl"] {
     visibility: visible !important;
-    display: flex !important;
     opacity: 1 !important;
-    background: var(--teal-600) !important;
-    color: white !important;
-    border-radius: 0 8px 8px 0 !important;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.2) !important;
-}
-
-button[data-testid="collapsedControl"]:hover {
-    background: var(--teal-500) !important;
 }
 
 /* ── Main background ── */
@@ -883,32 +861,47 @@ except Exception as e:
     st.error(f"⚠️ Error loading models: {e}")
     st.stop()
 
+# ── Force sidebar open on Streamlit Cloud ──────────────────
+st.markdown("""
+<script>
+    // Force sidebar open — works on both local and cloud
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var btn = window.parent.document.querySelector(
+                'button[data-testid="collapsedControl"]');
+            if (btn) btn.click();
+        }, 500);
+    });
+</script>
+""", unsafe_allow_html=True)
+
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
 
     # Kidney emoji in teal circle + brand
-    st.markdown("""
-    <div class="kidney-logo">
-        <div style="
-            width:54px; height:54px;
-            border-radius:50%;
-            background: linear-gradient(
-                135deg, #0D9488 0%, #14B8A6 60%, #2DD4BF 100%);
-            border: 2.5px solid rgba(255,255,255,0.35);
-            box-shadow: 0 4px 14px rgba(13,148,136,0.5);
-            display:flex; align-items:center;
-            justify-content:center;
-            flex-shrink:0;">
-            <span style="font-size:28px;line-height:1;">&#x1FAD8;</span>
-        </div>
-        <div>
-            <div class="kidney-brand-name">CKDPredict</div>
-            <div class="kidney-brand-sub">
-                Kidney Health Intelligence
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="'
+        'display:flex;align-items:center;gap:12px;'
+        'padding:12px 0 8px 0;">'
+        '<div style="'
+        'width:52px;height:52px;border-radius:50%;'
+        'background:linear-gradient('
+        '135deg,#0D9488 0%,#14B8A6 60%,#2DD4BF 100%);'
+        'border:2px solid rgba(255,255,255,0.3);'
+        'box-shadow:0 4px 12px rgba(13,148,136,0.4);'
+        'display:flex;align-items:center;'
+        'justify-content:center;flex-shrink:0;">'
+        '<span style="font-size:26px;">🫘</span>'
+        '</div>'
+        '<div>'
+        '<div style="font-size:1.1rem;font-weight:800;'
+        'color:white;letter-spacing:-0.02em;">'
+        'CKDPredict</div>'
+        '<div style="font-size:0.7rem;color:rgba(255,255,255,0.5);'
+        'font-weight:400;">Kidney Health Intelligence</div>'
+        '</div></div>',
+        unsafe_allow_html=True
+    )
 
     st.markdown("---")
 
