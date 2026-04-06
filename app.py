@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import re
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -108,7 +109,10 @@ section[data-testid="stSidebar"] {
     box-shadow: 4px 0 24px rgba(0,0,0,0.15) !important;
 }
 
-section[data-testid="stSidebar"] * {
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] div.stMarkdown,
+section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label p {
     color: rgba(255,255,255,0.85) !important;
 }
 
@@ -573,12 +577,12 @@ div[data-testid="stButton"] > button:hover {
     box-shadow: 0 4px 12px rgba(13,148,136,0.3) !important;
 }
 
-div[data-testid="stButton"] > button[kind="primary"] {
+div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
     background: var(--teal-500) !important;
     color: white !important;
 }
 
-div[data-testid="stButton"] > button[kind="primary"]:hover {
+div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover {
     background: var(--teal-600) !important;
 }
 
@@ -861,20 +865,6 @@ except Exception as e:
     st.error(f"⚠️ Error loading models: {e}")
     st.stop()
 
-# ── Force sidebar open on Streamlit Cloud ──────────────────
-st.markdown("""
-<script>
-    // Force sidebar open — works on both local and cloud
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            var btn = window.parent.document.querySelector(
-                'button[data-testid="collapsedControl"]');
-            if (btn) btn.click();
-        }, 500);
-    });
-</script>
-""", unsafe_allow_html=True)
-
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
 
@@ -1068,6 +1058,7 @@ if "Administrator" in user_role and "Registry" in page:
             help="Filter patients by minimum CKD risk score"
         )
         min_risk = min_risk_pct / 100  # convert to 0-1 for filtering
+        st.caption("ℹ️ URGENT ≥ 85% · HIGH ≥ 65% · MODERATE ≥ 40%")
     with col4:
         search = st.text_input(
             "Quick find (patient ID)",
@@ -1239,15 +1230,13 @@ if "Administrator" in user_role and "Registry" in page:
                     f"✅ Notification sent to "
                     f"{high_n} HIGH risk patients.")
         with col3:
-            if st.button(
-                    "📥 Export to CSV",
-                    use_container_width=True):
-                st.download_button(
-                    "Download registry CSV",
-                    data=filt.to_csv(index=False),
-                    file_name="ckd_registry.csv",
-                    mime="text/csv"
-                )
+            st.download_button(
+                "📥 Export to CSV",
+                data=filt.to_csv(index=False),
+                file_name="ckd_registry.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
 # ════════════════════════════════════════════════════════════
 # SCREEN 2 — GEOGRAPHIC OVERVIEW
@@ -1510,10 +1499,12 @@ elif "Nephrologist" in user_role and "Individual" in page:
 
     st.markdown("""
     <div class="disclaimer-box clinical">
-        🔵 Support tool only — verify all orders and referrals
-        against the source chart and institutional policy.
-        AUC 0.9344 (Model A) · AUC 0.9753 (Model B) ·
-        Trained on Synthea synthetic EHR · Walonoski et al. (2018)
+        🔵 <strong>Clinical decision support only</strong> — this tool augments but does
+        not replace clinical judgment. Verify all orders and referrals against the
+        source chart and institutional policy. Model trained on
+        <strong>Synthea synthetic EHR data</strong> (Walonoski et al., 2018) —
+        not validated on real patient populations.
+        AUC 0.9344 (Model A · Diabetic) · AUC 0.9753 (Model B · Non-Diabetic).
     </div>
     """, unsafe_allow_html=True)
 
@@ -1535,170 +1526,173 @@ elif "Nephrologist" in user_role and "Individual" in page:
     ].sort_values('RISK_SCORE', ascending=False)
 
     if len(filt_reg) == 0:
-        st.warning("No patients match. Lower the minimum risk score.")
-        st.stop()
+        st.warning("⚠️ No patients match this filter. Lower the minimum risk score.")
+    else:
+        patient_id = st.selectbox(
+            "Select Patient",
+            filt_reg['PATIENT'].tolist()
+        )
 
-    patient_id = st.selectbox(
-        "Select Patient",
-        filt_reg['PATIENT'].tolist()
-    )
+        pt = filt_reg[
+            filt_reg['PATIENT'] == patient_id
+        ].iloc[0]
 
-    pt = filt_reg[
-        filt_reg['PATIENT'] == patient_id
-    ].iloc[0]
-
-    tier  = pt['URGENCY_TIER']
-    score = pt['RISK_SCORE']
-    color = get_tier_color(tier)
-    icon  = get_tier_icon(tier)
-
-    st.divider()
-
-    # Patient KPIs
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Model risk score",
-                f"{score:.4f}",
-                help="XGBoost probability 0–1")
-    col2.metric("Urgency tier",
-                f"{icon} {tier}")
-    col3.metric("Estimated time to CKD",
-                pt['EST_MONTHS'])
-    col4.metric("Projected annual cost",
-                f"${pt['PROJ_COST']:,.0f}",
-                delta=f"-${pt['POTENTIAL_SAVING']:,.0f} if caught early",
-                delta_color="inverse")
-
-    # Tabs
-    tab1, tab2 = st.tabs([
-        "📊 Risk summary",
-        "📋 Care planning checklist"])
-
-    with tab1:
-        col1, col2 = st.columns(2)
-        with col1:
+        tier  = pt['URGENCY_TIER']
+        score = pt['RISK_SCORE']
+        color = get_tier_color(tier)
+        icon  = get_tier_icon(tier)
+    
+        st.divider()
+    
+        # Patient KPIs
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Model risk score",
+                    f"{score:.4f}",
+                    help="XGBoost probability 0–1")
+        col2.metric("Urgency tier",
+                    f"{icon} {tier}")
+        col3.metric("Estimated time to CKD",
+                    pt['EST_MONTHS'])
+        col4.metric("Projected annual cost",
+                    f"${pt['PROJ_COST']:,.0f}",
+                    delta=f"-${pt['POTENTIAL_SAVING']:,.0f} if caught early",
+                    delta_color="inverse")
+    
+        # Tabs
+        tab1, tab2 = st.tabs([
+            "📊 Risk summary",
+            "📋 Care planning checklist"])
+    
+        with tab1:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("""
+                <div class="section-header">
+                    <h3 class="section-title">Demographics & pathway</h3>
+                </div>
+                """, unsafe_allow_html=True)
+                demo_fields = [
+                    'PATHWAY','CITY','STATE','GENDER','RACE']
+                for f in demo_fields:
+                    if f in pt.index and pd.notna(pt[f]):
+                        st.markdown(f"""
+                        <div style="display:flex;justify-content:space-between;
+                             padding:10px 0;border-bottom:1px solid #F3F4F6;">
+                            <span style="color:#9CA3AF;font-size:0.85rem;
+                                  font-weight:600;">{f.title()}</span>
+                            <span style="color:#1F2937;font-weight:600;
+                                  font-size:0.875rem;">{pt[f]}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+            with col2:
+                # Risk gauge
+                risk_pct = int(score * 100)
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=risk_pct,
+                    domain={'x':[0,1],'y':[0,1]},
+                    title={'text':'CKD Risk Score (%)'},
+                    gauge={
+                        'axis':{
+                            'range':[0,100],
+                            'tickwidth':1,
+                            'tickcolor':'#E5E7EB'
+                        },
+                        'bar':{'color':color},
+                        'bgcolor':'#F9FAFB',
+                        'steps':[
+                            {'range':[0,40],
+                             'color':'#DCFCE7'},
+                            {'range':[40,65],
+                             'color':'#DBEAFE'},
+                            {'range':[65,85],
+                             'color':'#FFEDD5'},
+                            {'range':[85,100],
+                             'color':'#FEE2E2'},
+                        ],
+                        'threshold':{
+                            'line':{'color':'#1F2937','width':3},
+                            'thickness':0.8,
+                            'value':risk_pct
+                        }
+                    },
+                    number={
+                        'font':{'size':36,
+                                'color':color,
+                                'family':'DM Mono'}
+                    }
+                ))
+                fig_gauge.update_layout(
+                    height=280,
+                    paper_bgcolor='white',
+                    font=dict(family='DM Sans'),
+                    margin=dict(t=40,b=20,l=30,r=30)
+                )
+                st.plotly_chart(fig_gauge,
+                    use_container_width=True)
+    
+        with tab2:
             st.markdown("""
             <div class="section-header">
-                <h3 class="section-title">Demographics & pathway</h3>
+                <h3 class="section-title">KDIGO 2024 Care Planning Checklist</h3>
+                <span class="section-pill">Evidence-based</span>
             </div>
             """, unsafe_allow_html=True)
-            demo_fields = [
-                'PATHWAY','CITY','STATE','GENDER','RACE']
-            for f in demo_fields:
-                if f in pt.index and pd.notna(pt[f]):
-                    st.markdown(f"""
-                    <div style="display:flex;justify-content:space-between;
-                         padding:10px 0;border-bottom:1px solid #F3F4F6;">
-                        <span style="color:#9CA3AF;font-size:0.85rem;
-                              font-weight:600;">{f.title()}</span>
-                        <span style="color:#1F2937;font-weight:600;
-                              font-size:0.875rem;">{pt[f]}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        with col2:
-            # Risk gauge
-            risk_pct = int(score * 100)
-            fig_gauge = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=risk_pct,
-                domain={'x':[0,1],'y':[0,1]},
-                title={'text':'CKD Risk Score (%)'},
-                gauge={
-                    'axis':{
-                        'range':[0,100],
-                        'tickwidth':1,
-                        'tickcolor':'#E5E7EB'
-                    },
-                    'bar':{'color':color},
-                    'bgcolor':'#F9FAFB',
-                    'steps':[
-                        {'range':[0,40],
-                         'color':'#DCFCE7'},
-                        {'range':[40,65],
-                         'color':'#DBEAFE'},
-                        {'range':[65,85],
-                         'color':'#FFEDD5'},
-                        {'range':[85,100],
-                         'color':'#FEE2E2'},
-                    ],
-                    'threshold':{
-                        'line':{'color':'#1F2937','width':3},
-                        'thickness':0.8,
-                        'value':risk_pct
-                    }
-                },
-                number={
-                    'font':{'size':36,
-                            'color':color,
-                            'family':'DM Mono'}
-                }
-            ))
-            fig_gauge.update_layout(
-                height=280,
-                paper_bgcolor='white',
-                font=dict(family='DM Sans'),
-                margin=dict(t=40,b=20,l=30,r=30)
-            )
-            st.plotly_chart(fig_gauge,
-                use_container_width=True)
-
-    with tab2:
-        st.markdown("""
-        <div class="section-header">
-            <h3 class="section-title">KDIGO 2024 Care Planning Checklist</h3>
-            <span class="section-pill">Evidence-based</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if tier in ['URGENT','HIGH']:
-            checklist = [
-                ("🔬", "Order eGFR and creatinine test",
-                 "KDIGO 2024 — primary CKD markers"),
-                ("🔬", "Order UACR (microalbumin/creatinine ratio)",
-                 "KDIGO 2024 — kidney damage marker"),
-                ("💊", "Initiate or review ACE inhibitor / ARB",
-                 "KDIGO 2024 — first-line nephroprotection"),
-                ("💊", "Consider SGLT2 inhibitor (if diabetic)",
-                 "ADA 2023 — reduces CKD progression by 40%"),
-                ("📊", "Target blood pressure < 130/80 mmHg",
-                 "KDIGO 2024 — BP target for CKD patients"),
-                ("👨‍⚕️", "Refer to nephrology",
-                 "KDIGO 2024 — specialist referral criteria"),
-                ("📅", "Schedule follow-up in 4 weeks",
-                 "KDIGO 2024 — monitoring interval"),
-                ("📋", "Document CKD stage in patient record",
-                 "Coding and billing compliance"),
-            ]
-        else:
-            checklist = [
-                ("📊", "Monitor eGFR every 3 months",
-                 "KDIGO 2024 — standard monitoring"),
-                ("🔬", "Annual UACR screening",
-                 "ADA 2023 — routine screening"),
-                ("📋", "Review and reconcile medications",
-                 "Nephrotoxic drug avoidance"),
-                ("🥗", "Lifestyle counseling — diet and exercise",
-                 "KDIGO 2024 — lifestyle modification"),
-                ("💊", "Ensure BP medications current",
-                 "KDIGO 2024 — BP management"),
-            ]
-
-        for icon, task, ref in checklist:
-            col1, col2 = st.columns([3, 5])
-            with col1:
-                st.checkbox(f"{icon} {task}")
-            with col2:
-                st.caption(ref)
-
-        st.markdown("""
-        <div class="ref-footer">
-            References: KDIGO (2024) Clinical Practice Guidelines for CKD
-            Evaluation and Management · ADA (2023) Standards of Care in
-            Diabetes — Section 11: CKD · Tangri et al. (2016) Kidney
-            Failure Risk Equation
-        </div>
-        """, unsafe_allow_html=True)
-
+    
+            if tier in ['URGENT','HIGH']:
+                checklist = [
+                    ("🔬", "Order eGFR and serum creatinine",
+                     "KDIGO 2024 — primary CKD staging markers"),
+                    ("🔬", "Order UACR (urine albumin-to-creatinine ratio)",
+                     "KDIGO 2024 — albuminuria is an independent CKD risk factor"),
+                    ("💊", "Initiate or review ACE inhibitor / ARB",
+                     "KDIGO 2024 — first-line nephroprotection; target UACR < 30 mg/g"),
+                    ("💊", "Consider SGLT2 inhibitor (diabetic or UACR ≥ 200 mg/g)",
+                     "KDIGO 2024 / DAPA-CKD / EMPA-KIDNEY — ~40% reduction in CKD progression"),
+                    ("💊", "Consider finerenone (diabetic CKD with albuminuria)",
+                     "KDIGO 2024 / FIDELIO-DKD / FIGARO-DKD — CV and renal protection"),
+                    ("📊", "Target blood pressure < 130/80 mmHg",
+                     "KDIGO 2024 — BP target for CKD; < 120 mmHg if high CV risk"),
+                    ("👨‍⚕️", "Refer to nephrology",
+                     "KDIGO 2024 — eGFR < 30, rapid decline > 5 mL/min/yr, or refractory HTN"),
+                    ("📅", "Schedule follow-up in 4 weeks",
+                     "KDIGO 2024 — monitoring interval for CKD G3+"),
+                    ("📋", "Document CKD stage in problem list",
+                     "ICD-10 coding compliance; triggers quality metrics"),
+                ]
+            else:
+                checklist = [
+                    ("📊", "Monitor eGFR every 3–6 months",
+                     "KDIGO 2024 — standard monitoring for CKD G2–G3"),
+                    ("🔬", "Annual UACR screening",
+                     "KDIGO 2024 / ADA 2023 — early albuminuria detection"),
+                    ("💊", "Review for nephrotoxic medications",
+                     "KDIGO 2024 — NSAIDs, contrast agents, aminoglycosides"),
+                    ("🥗", "Lifestyle counseling — low-sodium diet and exercise",
+                     "KDIGO 2024 — < 2g sodium/day; ≥ 150 min moderate exercise/week"),
+                    ("💊", "Ensure BP medications current and at target",
+                     "KDIGO 2024 — BP < 130/80 mmHg for all CKD patients"),
+                    ("🩺", "Assess cardiovascular risk (CKD is CVD equivalent)",
+                     "KDIGO 2024 — statin therapy if 10-year CVD risk > 10%"),
+                ]
+    
+            for icon, task, ref in checklist:
+                col1, col2 = st.columns([3, 5])
+                with col1:
+                    st.checkbox(f"{icon} {task}")
+                with col2:
+                    st.caption(ref)
+    
+            st.markdown("""
+            <div class="ref-footer">
+                References: KDIGO (2024) Clinical Practice Guidelines for CKD
+                Evaluation and Management · ADA (2023) Standards of Care in
+                Diabetes — Section 11: CKD · Tangri et al. (2016) Kidney
+                Failure Risk Equation
+            </div>
+            """, unsafe_allow_html=True)
+    
 # ════════════════════════════════════════════════════════════
 # SCREEN 5 — MODEL COMPARISON
 # ════════════════════════════════════════════════════════════
@@ -1854,14 +1848,34 @@ elif "Patient" in user_role:
 
     st.markdown("""
     <div class="disclaimer-box">
-        This page shows <strong>educational risk information only</strong>.
-        It is not a diagnosis. Call your clinician or 911 for urgent symptoms.
+        This page shows <strong>educational risk information only</strong> —
+        it is <strong>not a medical diagnosis</strong>. Risk scores are generated
+        by a machine learning model and must be interpreted by your care team.
+        For urgent symptoms (swelling, shortness of breath, severe pain),
+        call 911 or go to your nearest emergency room.
     </div>
     """, unsafe_allow_html=True)
 
+    col_a, col_b = st.columns([1, 3])
+    with col_a:
+        demo_tier = st.selectbox(
+            "Filter by tier",
+            ['URGENT', 'HIGH', 'MODERATE', 'LOW', 'All'],
+            index=0,
+            help="Pre-select a risk tier to narrow the patient list"
+        )
+    with col_b:
+        if demo_tier != 'All':
+            patient_options = registry[
+                registry['URGENCY_TIER'] == demo_tier
+            ].sort_values('RISK_SCORE', ascending=False)['PATIENT'].tolist()
+        else:
+            patient_options = registry.sort_values(
+                'RISK_SCORE', ascending=False)['PATIENT'].tolist()
+
     patient_id = st.selectbox(
         "Select your patient record ID",
-        registry['PATIENT'].tolist()
+        patient_options
     )
 
     pt      = registry[
@@ -1914,6 +1928,9 @@ elif "Patient" in user_role:
                     f"**{pt.get('PATHWAY','Unknown')}**")
 
         with col2:
+            # Pre-render bold markdown (f-strings can't contain backslashes)
+            msg_body_html = re.sub(
+                r'\*\*(.*?)\*\*', r'<strong>\1</strong>', msg['body'])
             # Message
             st.markdown(f"""
             <div style="padding:24px;background:{bg};
@@ -1925,7 +1942,7 @@ elif "Patient" in user_role:
                 </div>
                 <div style="font-size:0.875rem;color:#374151;
                      line-height:1.6;margin-bottom:12px;">
-                    {msg['body'].replace('**','<strong>').replace('**','</strong>')}
+                    {msg_body_html}
                 </div>
                 <div style="font-size:0.875rem;font-weight:600;
                      color:{color};">
