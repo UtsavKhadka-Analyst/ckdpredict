@@ -16,6 +16,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import re
+import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -864,6 +865,24 @@ try:
 except Exception as e:
     st.error(f"⚠️ Error loading models: {e}")
     st.stop()
+
+# ── Patient Portal Session State ───────────────────────────
+SESSION_TIMEOUT_MINUTES = 10
+
+if 'pt_authenticated' not in st.session_state:
+    st.session_state.pt_authenticated = False
+if 'pt_record_id' not in st.session_state:
+    st.session_state.pt_record_id = None
+if 'pt_last_active' not in st.session_state:
+    st.session_state.pt_last_active = None
+
+# Auto-expire session after timeout
+if st.session_state.pt_authenticated and st.session_state.pt_last_active:
+    elapsed = (datetime.datetime.now() - st.session_state.pt_last_active).total_seconds() / 60
+    if elapsed > SESSION_TIMEOUT_MINUTES:
+        st.session_state.pt_authenticated = False
+        st.session_state.pt_record_id = None
+        st.session_state.pt_last_active = None
 
 # ── Sidebar ────────────────────────────────────────────────
 with st.sidebar:
@@ -1846,253 +1865,318 @@ elif "Patient" in user_role:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="disclaimer-box">
-        This page shows <strong>educational risk information only</strong> —
-        it is <strong>not a medical diagnosis</strong>. Risk scores are generated
-        by a machine learning model and must be interpreted by your care team.
-        For urgent symptoms (swelling, shortness of breath, severe pain),
-        call 911 or go to your nearest emergency room.
-    </div>
-    """, unsafe_allow_html=True)
+    if not st.session_state.pt_authenticated:
+        # ── LOGIN GATE — no patient data visible ───────────
+        st.markdown("""
+        <div class="disclaimer-box">
+            This portal is <strong>access-controlled</strong>. Enter your
+            <strong>Patient Portal ID</strong> (8-character code from your
+            care letter) to view your personal kidney health summary.
+            No data is visible until you sign in.
+        </div>
+        """, unsafe_allow_html=True)
 
-    col_a, col_b = st.columns([1, 3])
-    with col_a:
-        demo_tier = st.selectbox(
-            "Filter by tier",
-            ['URGENT', 'HIGH', 'MODERATE', 'LOW', 'All'],
-            index=0,
-            help="Pre-select a risk tier to narrow the patient list"
-        )
-    with col_b:
-        if demo_tier != 'All':
-            patient_options = registry[
-                registry['URGENCY_TIER'] == demo_tier
-            ].sort_values('RISK_SCORE', ascending=False)['PATIENT'].tolist()
-        else:
-            patient_options = registry.sort_values(
-                'RISK_SCORE', ascending=False)['PATIENT'].tolist()
-
-    patient_id = st.selectbox(
-        "Select your patient record ID",
-        patient_options
-    )
-
-    pt      = registry[
-        registry['PATIENT']==patient_id].iloc[0]
-    tier    = pt['URGENCY_TIER']
-    score   = pt['RISK_SCORE']
-    months  = pt['EST_MONTHS']
-    color   = get_tier_color(tier)
-    bg      = get_tier_bg(tier)
-    icon    = get_tier_icon(tier)
-    risk_pct = int(score * 100)
-    msg     = get_patient_message(tier, months)
-    steps   = get_action_steps(tier)
-
-    st.divider()
-
-    # Overview tab
-    tab1, tab2, tab3 = st.tabs([
-        "📊 Overview",
-        "✅ My action list",
-        "📚 Learn & ask"
-    ])
-
-    with tab1:
-        col1, col2 = st.columns([1, 2])
-
-        with col1:
-            # Risk dial
-            st.markdown(f"""
-            <div class="risk-dial">
-                <div style="font-size:0.72rem;font-weight:700;
-                     color:#9CA3AF;text-transform:uppercase;
-                     letter-spacing:0.08em;margin-bottom:12px;">
-                    Modelled risk index
-                </div>
-                <div class="risk-dial-pct" style="color:{color};">
-                    {risk_pct}%
-                </div>
-                <div class="risk-dial-tier" style="color:{color};">
-                    {icon} {tier}
-                </div>
-                <div class="risk-dial-note">
-                    Based on registry score · not a lab result
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            if 'PATHWAY' in pt.index:
-                st.caption(
-                    f"Care pathway in registry: "
-                    f"**{pt.get('PATHWAY','Unknown')}**")
-
-        with col2:
-            # Pre-render bold markdown (f-strings can't contain backslashes)
-            msg_body_html = re.sub(
-                r'\*\*(.*?)\*\*', r'<strong>\1</strong>', msg['body'])
-            # Message
-            st.markdown(f"""
-            <div style="padding:24px;background:{bg};
-                 border-radius:12px;border:1px solid {color}33;
-                 margin-bottom:16px;">
-                <div style="font-size:1.05rem;font-weight:700;
-                     color:{color};margin-bottom:8px;">
-                    {msg['headline']}
-                </div>
-                <div style="font-size:0.875rem;color:#374151;
-                     line-height:1.6;margin-bottom:12px;">
-                    {msg_body_html}
-                </div>
-                <div style="font-size:0.875rem;font-weight:600;
-                     color:{color};">
-                    {msg['cta']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Timeline
-            st.markdown(f"""
+        _, col_mid, _ = st.columns([1, 2, 1])
+        with col_mid:
+            st.markdown("""
             <div style="background:white;border:1px solid #E5E7EB;
-                 border-radius:10px;padding:16px 20px;">
-                <div style="font-size:0.75rem;font-weight:700;
-                     color:#9CA3AF;text-transform:uppercase;
-                     letter-spacing:0.08em;margin-bottom:8px;">
-                    Estimated timeline
-                </div>
-                <div style="font-size:1.5rem;font-weight:800;
-                     color:{color};font-family:'DM Mono',monospace;
-                     margin-bottom:4px;">
-                    {months}
-                </div>
-                <div style="font-size:0.75rem;color:#9CA3AF;">
-                    If nothing changes clinically, the model suggests
-                    kidney disease could develop in about
-                    <strong>{months}</strong>.
-                    Your team will interpret this with labs.
-                </div>
-                <div style="font-size:0.68rem;color:#D1D5DB;
-                     margin-top:8px;">
-                    Estimate uses the same EST_MONTHS field as the
-                    administrator registry. Not a personal prognosis.
+                 border-radius:16px;padding:32px 28px;margin-top:16px;
+                 box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+                <div style="text-align:center;margin-bottom:24px;">
+                    <div style="font-size:2rem;margin-bottom:8px;">🔐</div>
+                    <div style="font-size:1.1rem;font-weight:700;
+                         color:#0F172A;">Secure Patient Sign-In</div>
+                    <div style="font-size:0.8rem;color:#9CA3AF;
+                         margin-top:4px;">Session expires after 10 minutes of inactivity</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-    with tab2:
+            with st.form("patient_portal_login", clear_on_submit=False):
+                portal_id = st.text_input(
+                    "Patient Portal ID",
+                    placeholder="e.g.  b9abfbd3",
+                    help="8-character code printed on your care letter"
+                )
+                submitted = st.form_submit_button(
+                    "🔓 Access My Health Summary",
+                    type="primary",
+                    use_container_width=True
+                )
+                if submitted:
+                    pid_clean = portal_id.strip().lower().replace("-", "")
+                    if len(pid_clean) < 6:
+                        st.error("Please enter at least 6 characters of your Patient Portal ID.")
+                    else:
+                        matches = registry[
+                            registry['PATIENT'].str.lower()
+                            .str.replace("-", "", regex=False)
+                            .str.startswith(pid_clean)
+                        ]
+                        if len(matches) == 1:
+                            st.session_state.pt_authenticated = True
+                            st.session_state.pt_record_id = matches.iloc[0]['PATIENT']
+                            st.session_state.pt_last_active = datetime.datetime.now()
+                            st.rerun()
+                        elif len(matches) > 1:
+                            st.warning(f"⚠️ {len(matches)} records matched — please enter more characters.")
+                        else:
+                            st.error("❌ Patient Portal ID not found. Please check your care letter.")
+
+            with st.expander("ℹ️ Demo access — educational context only"):
+                demo_samples = (
+                    registry.groupby('URGENCY_TIER', group_keys=False)
+                    .apply(lambda g: g.nlargest(1, 'RISK_SCORE'))
+                    .reset_index(drop=True)
+                )
+                st.caption("Use any of these sample IDs to explore the portal:")
+                for _, row in demo_samples.iterrows():
+                    st.code(
+                        f"{row['PATIENT'][:8]}   ({row['URGENCY_TIER']} tier)",
+                        language=None
+                    )
+
+    else:
+        # ── AUTHENTICATED VIEW ─────────────────────────────
+        # Update last-active timestamp on every interaction
+        st.session_state.pt_last_active = datetime.datetime.now()
+
+        # Sign Out button in sidebar
+        with st.sidebar:
+            st.divider()
+            if st.button("🚪 Sign Out", use_container_width=True):
+                st.session_state.pt_authenticated = False
+                st.session_state.pt_record_id = None
+                st.session_state.pt_last_active = None
+                st.rerun()
+            st.caption("Session expires after 10 min inactivity")
+
         st.markdown("""
-        <div class="section-header">
-            <h3 class="section-title">Your next steps</h3>
-            <span class="section-pill">Personalised</span>
+        <div class="disclaimer-box">
+            This page shows <strong>educational risk information only</strong> —
+            it is <strong>not a medical diagnosis</strong>. Risk scores are generated
+            by a machine learning model and must be interpreted by your care team.
+            For urgent symptoms (swelling, shortness of breath, severe pain),
+            call 911 or go to your nearest emergency room.
         </div>
         """, unsafe_allow_html=True)
 
-        for i, (emoji, text) in enumerate(steps, 1):
-            st.markdown(f"""
-            <div class="action-step">
-                <div class="action-step-num">{i}</div>
-                <div class="action-step-text">
-                    {emoji} {text}
+        # Load ONLY this patient's record — no other data accessible
+        pt      = registry[
+            registry['PATIENT'] == st.session_state.pt_record_id].iloc[0]
+        tier    = pt['URGENCY_TIER']
+        score   = pt['RISK_SCORE']
+        months  = pt['EST_MONTHS']
+        color   = get_tier_color(tier)
+        bg      = get_tier_bg(tier)
+        icon    = get_tier_icon(tier)
+        risk_pct = int(score * 100)
+        msg     = get_patient_message(tier, months)
+        steps   = get_action_steps(tier)
+
+        st.divider()
+
+        # Overview tab
+        tab1, tab2, tab3 = st.tabs([
+            "📊 Overview",
+            "✅ My action list",
+            "📚 Learn & ask"
+        ])
+
+        with tab1:
+            col1, col2 = st.columns([1, 2])
+
+            with col1:
+                # Risk dial
+                st.markdown(f"""
+                <div class="risk-dial">
+                    <div style="font-size:0.72rem;font-weight:700;
+                         color:#9CA3AF;text-transform:uppercase;
+                         letter-spacing:0.08em;margin-bottom:12px;">
+                        Modelled risk index
+                    </div>
+                    <div class="risk-dial-pct" style="color:{color};">
+                        {risk_pct}%
+                    </div>
+                    <div class="risk-dial-tier" style="color:{color};">
+                        {icon} {tier}
+                    </div>
+                    <div class="risk-dial-note">
+                        Based on registry score · not a lab result
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if 'PATHWAY' in pt.index:
+                    st.caption(
+                        f"Care pathway in registry: "
+                        f"**{pt.get('PATHWAY','Unknown')}**")
+
+            with col2:
+                # Pre-render bold markdown (f-strings can't contain backslashes)
+                msg_body_html = re.sub(
+                    r'\*\*(.*?)\*\*', r'<strong>\1</strong>', msg['body'])
+                # Message
+                st.markdown(f"""
+                <div style="padding:24px;background:{bg};
+                     border-radius:12px;border:1px solid {color}33;
+                     margin-bottom:16px;">
+                    <div style="font-size:1.05rem;font-weight:700;
+                         color:{color};margin-bottom:8px;">
+                        {msg['headline']}
+                    </div>
+                    <div style="font-size:0.875rem;color:#374151;
+                         line-height:1.6;margin-bottom:12px;">
+                        {msg_body_html}
+                    </div>
+                    <div style="font-size:0.875rem;font-weight:600;
+                         color:{color};">
+                        {msg['cta']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Timeline
+                st.markdown(f"""
+                <div style="background:white;border:1px solid #E5E7EB;
+                     border-radius:10px;padding:16px 20px;">
+                    <div style="font-size:0.75rem;font-weight:700;
+                         color:#9CA3AF;text-transform:uppercase;
+                         letter-spacing:0.08em;margin-bottom:8px;">
+                        Estimated timeline
+                    </div>
+                    <div style="font-size:1.5rem;font-weight:800;
+                         color:{color};font-family:'DM Mono',monospace;
+                         margin-bottom:4px;">
+                        {months}
+                    </div>
+                    <div style="font-size:0.75rem;color:#9CA3AF;">
+                        If nothing changes clinically, the model suggests
+                        kidney disease could develop in about
+                        <strong>{months}</strong>.
+                        Your team will interpret this with labs.
+                    </div>
+                    <div style="font-size:0.68rem;color:#D1D5DB;
+                         margin-top:8px;">
+                        Estimate uses the same EST_MONTHS field as the
+                        administrator registry. Not a personal prognosis.
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        with tab2:
+            st.markdown("""
+            <div class="section-header">
+                <h3 class="section-title">Your next steps</h3>
+                <span class="section-pill">Personalised</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            for i, (emoji, text) in enumerate(steps, 1):
+                st.markdown(f"""
+                <div class="action-step">
+                    <div class="action-step-num">{i}</div>
+                    <div class="action-step-text">
+                        {emoji} {text}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Cost awareness
+            st.markdown("""
+            <div class="section-header" style="margin-top:28px;">
+                <h3 class="section-title">Why early detection matters</h3>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="display:grid;grid-template-columns:1fr 1fr;
+                 gap:16px;margin-bottom:16px;">
+                <div class="cost-card" style="background:#FFF7ED;
+                     border-color:#FED7AA;">
+                    <div class="cost-card-label" style="color:#EA580C;">
+                        If CKD develops untreated
+                    </div>
+                    <div class="cost-card-amount" style="color:#EA580C;">
+                        $28,162
+                    </div>
+                    <div class="cost-card-sub">per year in healthcare costs</div>
+                </div>
+                <div class="cost-card" style="background:#F0FDF4;
+                     border-color:#BBF7D0;">
+                    <div class="cost-card-label" style="color:#16A34A;">
+                        With early intervention
+                    </div>
+                    <div class="cost-card-amount" style="color:#16A34A;">
+                        $13,604
+                    </div>
+                    <div class="cost-card-sub">potential saving of $14,558/yr</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        # Cost awareness
-        st.markdown("""
-        <div class="section-header" style="margin-top:28px;">
-            <h3 class="section-title">Why early detection matters</h3>
-        </div>
-        """, unsafe_allow_html=True)
+            st.info("💡 Early detection and treatment can significantly "
+                    "reduce kidney disease progression and associated "
+                    "healthcare costs. Reference: USRDS (2023)")
 
-        st.markdown("""
-        <div style="display:grid;grid-template-columns:1fr 1fr;
-             gap:16px;margin-bottom:16px;">
-            <div class="cost-card" style="background:#FFF7ED;
-                 border-color:#FED7AA;">
-                <div class="cost-card-label" style="color:#EA580C;">
-                    If CKD develops untreated
-                </div>
-                <div class="cost-card-amount" style="color:#EA580C;">
-                    $28,162
-                </div>
-                <div class="cost-card-sub">per year in healthcare costs</div>
+            st.markdown("""
+            <div class="disclaimer-box urgent">
+                🏥 <strong>Important:</strong> This risk assessment is generated
+                by a machine learning model trained on synthetic electronic
+                health records. It is not a medical diagnosis. Please consult
+                your nephrologist or primary care physician before making
+                any health decisions. Reference: KDIGO (2024)
             </div>
-            <div class="cost-card" style="background:#F0FDF4;
-                 border-color:#BBF7D0;">
-                <div class="cost-card-label" style="color:#16A34A;">
-                    With early intervention
-                </div>
-                <div class="cost-card-amount" style="color:#16A34A;">
-                    $13,604
-                </div>
-                <div class="cost-card-sub">potential saving of $14,558/yr</div>
+            """, unsafe_allow_html=True)
+
+        with tab3:
+            st.markdown("""
+            <div class="section-header">
+                <h3 class="section-title">Learn about kidney health</h3>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        st.info("💡 Early detection and treatment can significantly "
-                "reduce kidney disease progression and associated "
-                "healthcare costs. Reference: USRDS (2023)")
+            with st.expander("🫘 What is CKD Stage 3?"):
+                st.markdown("""
+                Chronic Kidney Disease Stage 3 means your kidneys are
+                working at 30–59% of normal capacity (eGFR 30–59).
+                At this stage, most people have no symptoms, which is
+                why early detection is so important.
 
-        st.markdown("""
-        <div class="disclaimer-box urgent">
-            🏥 <strong>Important:</strong> This risk assessment is generated
-            by a machine learning model trained on synthetic electronic
-            health records. It is not a medical diagnosis. Please consult
-            your nephrologist or primary care physician before making
-            any health decisions. Reference: KDIGO (2024)
-        </div>
-        """, unsafe_allow_html=True)
+                **Reference:** KDIGO (2024) CKD Classification System
+                """)
 
-    with tab3:
-        st.markdown("""
-        <div class="section-header">
-            <h3 class="section-title">Learn about kidney health</h3>
-        </div>
-        """, unsafe_allow_html=True)
+            with st.expander("📊 What does my risk score mean?"):
+                st.markdown("""
+                Your risk score (0–100%) represents the probability
+                that you may develop CKD Stage 3 within the next
+                12 months based on your health records.
 
-        with st.expander("🫘 What is CKD Stage 3?"):
-            st.markdown("""
-            Chronic Kidney Disease Stage 3 means your kidneys are
-            working at 30–59% of normal capacity (eGFR 30–59).
-            At this stage, most people have no symptoms, which is
-            why early detection is so important.
+                - **0–40%** LOW — Continue regular monitoring
+                - **40–65%** MODERATE — Discuss with your doctor
+                - **65–85%** HIGH — Schedule appointment soon
+                - **85–100%** URGENT — Contact your doctor today
 
-            **Reference:** KDIGO (2024) CKD Classification System
-            """)
+                **Reference:** KDIGO (2024) · Tangri et al. (2016)
+                """)
 
-        with st.expander("📊 What does my risk score mean?"):
-            st.markdown("""
-            Your risk score (0–100%) represents the probability
-            that you may develop CKD Stage 3 within the next
-            12 months based on your health records.
+            with st.expander("💊 What can slow CKD progression?"):
+                st.markdown("""
+                Evidence-based interventions that can slow CKD:
+                - Blood pressure control below 130/80 mmHg
+                - HbA1c control below 7% (if diabetic)
+                - ACE inhibitors or ARB medications
+                - SGLT2 inhibitors (if diabetic)
+                - Low-sodium diet (under 2g per day)
+                - Regular moderate exercise
 
-            - **0–40%** LOW — Continue regular monitoring
-            - **40–65%** MODERATE — Discuss with your doctor
-            - **65–85%** HIGH — Schedule appointment soon
-            - **85–100%** URGENT — Contact your doctor today
+                **Reference:** KDIGO (2024) · ADA (2023)
+                """)
 
-            **Reference:** KDIGO (2024) · Tangri et al. (2016)
-            """)
-
-        with st.expander("💊 What can slow CKD progression?"):
-            st.markdown("""
-            Evidence-based interventions that can slow CKD:
-            - Blood pressure control below 130/80 mmHg
-            - HbA1c control below 7% (if diabetic)
-            - ACE inhibitors or ARB medications
-            - SGLT2 inhibitors (if diabetic)
-            - Low-sodium diet (under 2g per day)
-            - Regular moderate exercise
-
-            **Reference:** KDIGO (2024) · ADA (2023)
-            """)
-
-        with st.expander("📞 Who should I contact?"):
-            st.markdown("""
-            - **Urgent symptoms** (swelling, difficulty breathing,
-              sudden pain): Call 911 or go to Emergency
-            - **Risk questions**: Call your primary care physician
-            - **Specialist care**: Ask for a nephrology referral
-            - **This tool**: Discuss results at your next visit
-            """)
+            with st.expander("📞 Who should I contact?"):
+                st.markdown("""
+                - **Urgent symptoms** (swelling, difficulty breathing,
+                  sudden pain): Call 911 or go to Emergency
+                - **Risk questions**: Call your primary care physician
+                - **Specialist care**: Ask for a nephrology referral
+                - **This tool**: Discuss results at your next visit
+                """)
