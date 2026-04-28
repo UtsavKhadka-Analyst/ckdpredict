@@ -100,7 +100,7 @@ Diabetic   Non-Diabetic
 ## 🗄️ Data
 
 - **Source:** [Synthea™](https://synthetichealth.github.io/synthea/) v3 — fully synthetic, HIPAA-safe patient records
-- **Populations:** Massachusetts (17,615) · Texas (5,375) · **Total: 22,990 patients**
+- **Populations:** California (17,615) · Texas (5,375) · **Total: 22,990 patients**
 - **No real PHI** used at any stage of development
 
 ---
